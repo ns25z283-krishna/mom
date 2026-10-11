@@ -425,6 +425,7 @@ table.repl th { font-size: 12px; color: var(--muted); text-transform: uppercase;
     <div class="grid2">
       <div class="field"><label for="mLang">Language spoken</label><select id="mLang"></select></div>
       <div class="field"><label for="mNspk">Number of speakers</label><select id="mNspk"></select></div>
+      <div class="field" id="mSrcF"><label for="mSrc">Transcript text from</label><select id="mSrc"><option value="auto">Best available (recommended)</option><option value="captions">Live captions</option><option value="engine">Speech engine in this page</option></select></div>
       <div class="field"><label for="mQual">Accuracy</label><select id="mQual"><option value="auto">Best for the language (recommended)</option><option value="standard">Standard: fastest</option><option value="high">High: most accurate, about 3x slower</option></select></div>
     </div>
     <div class="field"><label for="mPeople">Attendees <span class="hint">(optional, one per line)</span></label><textarea id="mPeople" style="min-height:64px"></textarea></div>
@@ -907,8 +908,21 @@ function applyRepls(text) {
   }
   return text;
 }
+function termList(terms) { return terms.map(t => ({ t, low: letters(t), ph: phon(t) })).filter(x => x.low.length >= 3 && x.ph.length >= 3); }
+// How close a heard word is to a word-list term (lower is closer), or null when it isn't a match
+function termScore(low, ph, x, nameLike) {
+  if (low === x.low) return 0;
+  if (ph[0] !== x.ph[0]) return null;
+  const long = x.ph.length >= 5, d = lev(ph, x.ph);
+  if (d > (long ? 1 : 0)) return null;
+  // Short names only replace words that look like names, so "pray" never becomes "Priya"
+  if (!long && !nameLike) return null;
+  const r = lev(low, x.low) / Math.max(low.length, x.low.length);
+  if (r > (!long ? 0.4 : d === 0 ? 0.6 : 0.5)) return null;
+  return 1 + d + r;
+}
 function fuzzyFix(text, terms) {
-  const T = terms.map(t => ({ t, low: letters(t), ph: phon(t) })).filter(x => x.low.length >= 3 && x.ph.length >= 3);
+  const T = termList(terms);
   if (!T.length || !text) return text;
   const words = text.split(/\s+/).filter(Boolean), out = [];
   for (let i = 0; i < words.length;) {
@@ -924,19 +938,58 @@ function fuzzyFix(text, terms) {
       if (low.length < 3) continue;
       const ph = phon(core);
       for (const x of T) {
-        let score;
-        if (low === x.low) score = 0;
-        else {
-          if (ph[0] !== x.ph[0]) continue;
-          const long = x.ph.length >= 5, d = lev(ph, x.ph);
-          if (d > (long ? 1 : 0)) continue;
-          // Short names only replace words that look like names, so "pray" never becomes "Priya"
-          if (!long && !/^[A-Z]/.test(core)) continue;
-          const r = lev(low, x.low) / Math.max(low.length, x.low.length);
-          if (r > (!long ? 0.4 : d === 0 ? 0.6 : 0.5)) continue;
-          score = 1 + d + r;
-        }
+        const score = termScore(low, ph, x, /^[A-Z]/.test(core));
+        if (score === null) continue;
         if (!best || score < best.score || (score === best.score && w > best.w)) best = { score, w, rep: lead + x.t + trail };
+      }
+    }
+    if (best) { out.push(best.rep); i += best.w; } else { out.push(words[i]); i++; }
+  }
+  return out.join(' ');
+}
+// Hindi (Devanagari) to rough Latin letters, so names said in Hindi can be matched to the word list
+const DEV_C = { 'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'n', 'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'n', 'ट': 't', 'ठ': 'th', 'ड': 'd', 'ढ': 'dh', 'ण': 'n', 'त': 't', 'थ': 'th', 'द': 'd', 'ध': 'dh', 'न': 'n', 'प': 'p', 'फ': 'ph', 'ब': 'b', 'भ': 'bh', 'म': 'm', 'य': 'y', 'र': 'r', 'ल': 'l', 'व': 'v', 'श': 'sh', 'ष': 'sh', 'स': 's', 'ह': 'h', 'ळ': 'l' };
+const DEV_NUKTA = { 'क': 'q', 'ख': 'kh', 'ग': 'g', 'ज': 'z', 'ड': 'r', 'ढ': 'rh', 'फ': 'f' };
+const DEV_V = { 'अ': 'a', 'आ': 'aa', 'इ': 'i', 'ई': 'ee', 'उ': 'u', 'ऊ': 'oo', 'ऋ': 'ri', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au', 'ऑ': 'o' };
+const DEV_M = { 'ा': 'aa', 'ि': 'i', 'ी': 'ee', 'ु': 'u', 'ू': 'oo', 'ृ': 'ri', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au', 'ॉ': 'o', 'ॅ': 'e' };
+function translit(w) {
+  let out = '';
+  const ch = [...w.normalize('NFC')];
+  for (let i = 0; i < ch.length; i++) {
+    const c = ch[i];
+    if (DEV_C[c]) {
+      let cons = DEV_C[c];
+      if (ch[i + 1] === '़') { cons = DEV_NUKTA[c] || cons; i++; }
+      const nx = ch[i + 1];
+      if (DEV_M[nx]) { out += cons + DEV_M[nx]; i++; }
+      else if (nx === '्') { out += cons; i++; }
+      else out += cons + (i + 1 < ch.length ? 'a' : ''); // no "a" at the end of a word, as spoken
+    } else if (DEV_V[c]) out += DEV_V[c];
+    else if (c === 'ं' || c === 'ँ') out += 'n';
+    else if (c === 'ः') out += 'h';
+    else if (/[a-z0-9]/i.test(c)) out += c;
+  }
+  return out;
+}
+// Swap Hindi spellings of word-list names (नूनरे -> NoonRay) before translating, so the translator keeps them
+function protectNames(text, terms) {
+  const T = termList(terms);
+  if (!T.length || !/[ऀ-ॿ]/.test(text)) return text;
+  const words = text.split(/\s+/).filter(Boolean), out = [];
+  for (let i = 0; i < words.length;) {
+    let best = null;
+    for (let w = Math.min(2, words.length - i); w >= 1; w--) {
+      const seg = words.slice(i, i + w);
+      if (seg.slice(0, -1).some(x => /[।,.!?]$/.test(x))) continue;
+      const joined = seg.join(' ');
+      const m = joined.match(/^([^ऀ-ॿ]*)([ऀ-ॣ०-ॿ\s]+?)([^ऀ-ॿ]*)$/);
+      if (!m) continue;
+      const low = letters(translit(m[2].replace(/\s+/g, '')));
+      if (low.length < 4) continue;
+      const ph = phon(low);
+      for (const x of T) {
+        const sc = termScore(low, ph, x, true);
+        if (sc !== null && (!best || sc < best.sc)) best = { sc, w, rep: m[1] + x.t + m[3] };
       }
     }
     if (best) { out.push(best.rep); i += best.w; } else { out.push(words[i]); i++; }
@@ -973,7 +1026,7 @@ let micStream, dispStream, ctx, proc, encoder, mp3 = [], state = 'idle', vrec = 
 let samples = 0, rate = 48000, startedAt = 0, tick;
 let peakMic = 0, peakSys = 0, youTalking = false, youSince = 0, quietBlocks = 0;
 const youSegments = [], tagLog = [], liveLines = [];
-let sr = null, srWanted = false, srTrack = null, interimEl = null;
+let sr = null, srWanted = false, srTrack = null, interimEl = null, uttStart = null;
 
 function show(text, kind) { const m = $('msg'); m.hidden = !text; m.className = 'msg ' + (kind || ''); m.textContent = text || ''; }
 function people() { return lines($('people').value); }
@@ -1201,15 +1254,16 @@ function lineEl(l, showOrig) {
   ln.append(el('span', fmt(l.t), 'ts'), body);
   return ln;
 }
-function addLine(text, src) {
-  const extra = people();
-  const l = { t: nowSec(), who: speakerNow(), text: src === 'en' || src === 'auto' ? correct(text, extra) : text };
+function addLine(text, src, t0, t1) {
+  const extra = people(), now = nowSec();
+  const start = t0 == null ? Math.max(0, now - 2) : t0;
+  const l = { t: +start.toFixed(2), end: +Math.max(start + 0.3, t1 == null ? now : t1).toFixed(2), who: speakerNow(), text: src === 'en' || src === 'auto' ? correct(text, extra) : text };
   liveLines.push(l);
   const box = $('live'), ph = box.querySelector('.ph'); if (ph) ph.remove();
   let node = lineEl(l, $('showOrig').checked); box.insertBefore(node, interimEl); box.scrollTop = box.scrollHeight;
   if (src !== 'en' && src !== 'auto') {
     l.pending = true; const n2 = lineEl(l, true); node.replaceWith(n2); node = n2;
-    toEnglish(text, src).then(en => {
+    toEnglish(protectNames(text, [...vocab(), ...extra]), src).then(en => {
       delete l.pending;
       if (en) l.en = correct(en, extra);
       else if (!trFailNoted) { trFailNoted = true; $('liveNote').textContent = 'Live translation is not available in this browser right now, so captions show the original language. The final transcript will still be in English. Chrome 138 or newer translates on your computer.'; }
@@ -1234,10 +1288,11 @@ function startLive() {
   const inst = sr;
   sr.onresult = e => {
     if (inst !== sr || state !== 'recording') return;
+    if (uttStart === null) uttStart = Math.max(0, nowSec() - 0.8); // speech began a little before the first words arrived
     let interim = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const r = e.results[i], txt = r[0].transcript.trim();
-      if (r.isFinal) { if (txt) addLine(txt, lang); } else interim += txt + ' ';
+      if (r.isFinal) { if (txt) addLine(txt, lang, uttStart, nowSec() - 0.4); uttStart = null; } else interim += txt + ' ';
     }
     setInterim(interim.trim());
   };
@@ -1250,7 +1305,7 @@ function startLive() {
   try { srTrack ? sr.start(srTrack) : sr.start(); }
   catch (_) { try { sr.start(); } catch (__) {} }
 }
-function stopLive() { srWanted = false; if (sr) { const s = sr; sr = null; try { s.stop(); } catch (_) {} } setInterim(''); }
+function stopLive() { srWanted = false; uttStart = null; if (sr) { const s = sr; sr = null; try { s.stop(); } catch (_) {} } setInterim(''); }
 $('liveOn').addEventListener('change', () => { if (state !== 'recording') return; if ($('liveOn').checked) { prepTranslator(); startLive(); } else stopLive(); });
 $('showOrig').addEventListener('change', () => {
   if (!liveLines.length) return;
@@ -1303,11 +1358,11 @@ async function decode16k(blob) {
 async function ensureModels(q) {
   if (!self.caches) throw new Error('Open this page from its web address (your GitHub Pages link), not as a file on your computer.');
   const c = await caches.open(CACHE);
-  const urls = [...MODELS.segmentation, ...MODELS.embedding, ...MODELS.tokens, ...MODELS[q].encoder, ...MODELS[q].decoder];
-  const totalBytes = MODEL_BYTES.speakers + MODEL_BYTES[q];
+  const urls = q ? [...MODELS[q].encoder, ...MODELS[q].decoder] : [...MODELS.segmentation, ...MODELS.embedding, ...MODELS.tokens];
+  const totalBytes = q ? MODEL_BYTES[q] : MODEL_BYTES.speakers;
   let have = 0; const todo = [];
   for (const u of urls) { const r = await c.match(u); if (r) have += +(r.headers.get('content-length') || 0) || (await r.clone().blob()).size; else todo.push(u); }
-  if (!todo.length) { progress(1, 'Speech models ready'); return; }
+  if (!todo.length) return;
   let got = have;
   for (const u of todo) {
     let res;
@@ -1351,6 +1406,45 @@ function makeTurns(segs, audio) {
   }
   return out;
 }
+// The live captions (the browser's speech service) are far better than the offline engine for Hindi and
+// other Indian languages. When they cover most of the meeting, use their text and give each line the
+// speaker found by the voice analysis.
+function captionCoverage(m, segs) {
+  const caps = (m.live || []).map(c => [c.t - 0.5, (c.end != null ? c.end : c.t) + 0.5]);
+  let speech = 0, covered = 0;
+  for (const s of segs) {
+    speech += s.end - s.start;
+    let cov = 0; for (const [a, b] of caps) cov += Math.max(0, Math.min(b, s.end) - Math.max(a, s.start));
+    covered += Math.min(cov, s.end - s.start);
+  }
+  return speech ? covered / speech : 0;
+}
+function useCaptions(m, segs) {
+  const src = m.textSrc || 'auto';
+  if (!(m.live || []).length || src === 'engine') return false;
+  if (src === 'captions') return true;
+  return m.lang !== 'en' && m.live.some(c => c.end != null) && captionCoverage(m, segs) >= 0.6;
+}
+async function rowsFromCaptions(m, segs, order) {
+  const rows = [], extra = m.attendees || [];
+  const terms = [...vocab(), ...extra];
+  for (const c of m.live) {
+    const a = c.t - 0.3, b = (c.end != null ? c.end : c.t) + 0.3, score = {};
+    segs.forEach(s => { const o = Math.min(b, s.end) - Math.max(a, s.start); if (o > 0) score[s.speaker] = (score[s.speaker] || 0) + o; });
+    let raw = Object.keys(score).sort((x, y) => score[y] - score[x])[0];
+    if (raw === undefined) raw = segs.slice().sort((x, y) => Math.min(Math.abs(x.start - a), Math.abs(x.end - b)) - Math.min(Math.abs(y.start - a), Math.abs(y.end - b)))[0].speaker;
+    const spk = order.indexOf(+raw);
+    let text = c.en;
+    if (!text && m.lang !== 'en' && /[^\x00-\x7f]/.test(c.text)) text = await toEnglish(protectNames(c.text, terms), m.lang);
+    text = (text || c.text || '').trim();
+    if (!text) continue;
+    if (!/[.!?]$/.test(text)) text += '.';
+    text = correct(fixDays(cap(text)), extra);
+    const end = c.end != null ? c.end : c.t + 2;
+    rows.push({ id: rows.length, start: +Math.max(0, c.t).toFixed(2), end: +end.toFixed(2), spk, text });
+  }
+  return rows;
+}
 function workerCount(q) {
   const cores = navigator.hardwareConcurrency || 4, mem = navigator.deviceMemory || 8;
   let n = Math.max(1, Math.min(3, Math.floor(cores / 2)));
@@ -1385,7 +1479,7 @@ async function process(m) {
     stage('audio', 'done');
 
     const q = quality(m);
-    stage('models', 'active'); await ensureModels(q); stage('models', 'done');
+    stage('models', 'active'); await ensureModels(null); stage('models', 'done');
 
     stage('speakers', 'active'); progress(0.02, 'Listening for different voices');
     const dw = new Worker('engine-worker.js'); workers.push(dw);
@@ -1397,33 +1491,41 @@ async function process(m) {
     dw.terminate();
     if (!segs.length) throw new Error('No speech was found in this recording.');
     const order = []; segs.forEach(s => { if (!order.includes(s.speaker)) order.push(s.speaker); });
-    m.rows = makeTurns(segs, audio).map((t, i) => ({ id: i, start: +t.start.toFixed(2), end: +t.end.toFixed(2), spk: order.indexOf(t.spk), text: '', done: false }));
     m.speakers = order.map((_, i) => ({ name: `Speaker ${i + 1}`, color: COLORS[i % COLORS.length] }));
     stage('speakers', 'done');
-
     stage('text', 'active');
-    if (cur === m) renderMeeting();
-    const n = workerCount(q);
-    progress(0, `Starting ${n} transcription engine${n > 1 ? 's' : ''}`);
-    const asr = [];
-    for (let i = 0; i < n; i++) { const w = new Worker('engine-worker.js'); workers.push(w); asr.push(w); }
-    const L = LANGS[m.lang] || LANGS.en;
-    const task = m.lang === 'en' ? 'transcribe' : 'translate';
-    await Promise.all(asr.map(w => call(w, { type: 'init-recognizer', models: { encoder: MODELS[q].encoder, decoder: MODELS[q].decoder, tokens: MODELS.tokens }, language: L.w, task })));
-    const totalSec = m.rows.reduce((s, r) => s + (r.end - r.start), 0);
-    let doneSec = 0, next = 0; const t1 = performance.now();
-    const extra = m.attendees || [];
-    await Promise.all(asr.map(async w => {
-      while (next < m.rows.length) {
-        const r = m.rows[next++];
-        const res = await call(w, { type: 'transcribe', id: r.id, samples: audio.slice(Math.floor(r.start * 16000), Math.ceil(r.end * 16000)) });
-        r.text = correct(fixDays(cleanText(res.text)), extra); r.done = true;
-        if (cur === m) updateRow(r);
-        doneSec += r.end - r.start;
-        const e = (performance.now() - t1) / 1000, left = e / doneSec * (totalSec - doneSec);
-        progress(doneSec / totalSec, `Writing the transcript: ${m.rows.filter(x => x.done).length} of ${m.rows.length} parts`, doneSec < totalSec ? `about ${mins(left)} left` : '');
-      }
-    }));
+    m.usedCaptions = useCaptions(m, segs);
+    if (m.usedCaptions) {
+      progress(0.5, 'Matching the live captions to the speakers');
+      m.rows = await rowsFromCaptions(m, segs, order);
+    }
+    if (!m.rows.length) { // no usable captions: transcribe with the speech engine
+      m.usedCaptions = false;
+      m.rows = makeTurns(segs, audio).map((t, i) => ({ id: i, start: +t.start.toFixed(2), end: +t.end.toFixed(2), spk: order.indexOf(t.spk), text: '', done: false }));
+      if (cur === m) renderMeeting();
+      await ensureModels(q);
+      const n = workerCount(q);
+      progress(0, `Starting ${n} transcription engine${n > 1 ? 's' : ''}`);
+      const asr = [];
+      for (let i = 0; i < n; i++) { const w = new Worker('engine-worker.js'); workers.push(w); asr.push(w); }
+      const L = LANGS[m.lang] || LANGS.en;
+      const task = m.lang === 'en' ? 'transcribe' : 'translate';
+      await Promise.all(asr.map(w => call(w, { type: 'init-recognizer', models: { encoder: MODELS[q].encoder, decoder: MODELS[q].decoder, tokens: MODELS.tokens }, language: L.w, task })));
+      const totalSec = m.rows.reduce((s, r) => s + (r.end - r.start), 0);
+      let doneSec = 0, next = 0; const t1 = performance.now();
+      const extra = m.attendees || [];
+      await Promise.all(asr.map(async w => {
+        while (next < m.rows.length) {
+          const r = m.rows[next++];
+          const res = await call(w, { type: 'transcribe', id: r.id, samples: audio.slice(Math.floor(r.start * 16000), Math.ceil(r.end * 16000)) });
+          r.text = correct(fixDays(cleanText(res.text)), extra); r.done = true;
+          if (cur === m) updateRow(r);
+          doneSec += r.end - r.start;
+          const e = (performance.now() - t1) / 1000, left = e / doneSec * (totalSec - doneSec);
+          progress(doneSec / totalSec, `Writing the transcript: ${m.rows.filter(x => x.done).length} of ${m.rows.length} parts`, doneSec < totalSec ? `about ${mins(left)} left` : '');
+        }
+      }));
+    }
     m.rows = m.rows.filter(r => r.text);
     m.rows.forEach(r => delete r.done);
     // Drop speakers left with no words and renumber the rest
@@ -1468,8 +1570,8 @@ function autoName(m) {
       let name = mm[1];
       if (NOT_NAMES.has(name.toLowerCase())) continue;
       if (att.length) {
-        const best = att.map(a => ({ a, d: lev(a.split(' ')[0], name) })).sort((x, y) => x.d - y.d)[0];
-        if (best.d > Math.max(1, Math.floor(name.length / 3))) continue;
+        const best = att.filter(a => !taken.has(a)).map(a => ({ a, d: lev(a.split(' ')[0], name) })).sort((x, y) => x.d - y.d)[0];
+        if (!best || best.d > (name.length >= 4 ? 2 : 1)) continue;
         name = best.a;
       } else if (name[0] !== name[0].toUpperCase()) continue;
       if (taken.has(name)) continue;
@@ -1489,7 +1591,8 @@ const TOPIC_RE = /\b(status|update|issue|problem|risk|plan|progress|done|finishe
 function contentWords(s) { return (s.toLowerCase().match(/\p{L}[\p{L}'’]*\p{L}/gu) || []).map(w => w.replace(/['’]s$/, '')).filter(w => w.length > 2 && !STOP.has(w)); }
 function sentencesOf(m) {
   const out = [];
-  m.rows.forEach(r => (r.text.match(/[^.!?।]+[.!?।]*/g) || []).map(s => s.trim()).filter(Boolean).forEach(s => out.push({ s, r })));
+  // Keep numbers like 2.5 in one piece while splitting into sentences
+  m.rows.forEach(r => (r.text.replace(/(\d)\.(\d)/g, '$1\u2024$2').match(/[^.!?।]+[.!?।]*/g) || []).map(s => s.replace(/\u2024/g, '.').trim()).filter(Boolean).forEach(s => out.push({ s, r })));
   return out;
 }
 function tidy(s) { return cap(s.replace(/^(?:so|and|okay|ok|well|then|yeah|right|um|uh)[,\s]+/i, '').replace(/^(?:so|and|okay|ok|well|then)[,\s]+/i, '')); }
@@ -1656,7 +1759,7 @@ function metaLine(m) {
   const bits = [dateStr(m.created), mins(m.duration)];
   if (m.speakers.length) bits.push(`${m.speakers.length} speaker${m.speakers.length === 1 ? '' : 's'}`);
   bits.push(m.lang === 'en' ? 'English' : `${(LANGS[m.lang] || LANGS.auto).name}, written in English`);
-  if (m.status === 'ready') bits.push(quality(m) === 'high' ? 'High accuracy' : 'Standard accuracy');
+  if (m.status === 'ready') bits.push(m.usedCaptions ? 'Text from live captions' : quality(m) === 'high' ? 'High accuracy' : 'Standard accuracy');
   if (m.source) bits.push(m.source);
   return bits.join(' · ');
 }
@@ -1674,7 +1777,7 @@ function renderMeeting() {
   if (needSetup) {
     $('setupTitle').textContent = m.status === 'ready' ? 'Redo the transcript' : 'Make the transcript';
     $('setupCancel').hidden = m.status !== 'ready';
-    $('mLang').value = m.lang in LANGS ? m.lang : 'en'; $('mNspk').value = String(m.nspk || 0); $('mQual').value = m.quality || 'auto'; setupHint();
+    $('mLang').value = m.lang in LANGS ? m.lang : 'en'; $('mNspk').value = String(m.nspk || 0); $('mQual').value = m.quality || 'auto'; $('mSrc').value = m.textSrc || 'auto'; $('mSrcF').hidden = !(m.live && m.live.length); setupHint();
     if (document.activeElement !== $('mPeople')) $('mPeople').value = (m.attendees || []).join('\n');
   }
   const hasRows = m.rows.length > 0, ready = m.status === 'ready';
@@ -1703,14 +1806,15 @@ $('mTitle').addEventListener('input', () => { if (!cur) return; cur.title = $('m
 $('xRedo').onclick = () => { $('moreMenu').open = false; setupOpen = true; renderMeeting(); $('setup').scrollIntoView({ block: 'center' }); };
 function setupHint() {
   const q = quality({ lang: $('mLang').value, quality: $('mQual').value });
-  $('setupHint').textContent = `${$('mLang').value === 'en' ? 'Written in English.' : 'Written in English (translated from what was said).'} ${q === 'high' ? 'High accuracy takes about 3x the meeting length on a typical laptop' : 'Standard accuracy takes about as long as the meeting'}. The first time, the speech models (${q === 'high' ? 'about 400' : 'about 190'} MB) are downloaded and then kept in your browser.`;
+  const caps = cur && cur.live && cur.live.length && $('mSrc').value !== 'engine' && ($('mSrc').value === 'captions' || $('mLang').value !== 'en');
+  $('setupHint').textContent = `${$('mLang').value === 'en' ? 'Written in English.' : 'Written in English (translated from what was said).'} ${caps ? 'The words come from the live captions (most accurate for Indian languages) when they cover most of the meeting; otherwise from the speech engine.' : ''} ${q === 'high' ? 'High accuracy takes about 3x the meeting length on a typical laptop' : 'Standard accuracy takes about as long as the meeting'}. The first time, the speech models (${q === 'high' ? 'about 400' : 'about 190'} MB) are downloaded and then kept in your browser.`;
 }
-$('mLang').addEventListener('change', setupHint); $('mQual').addEventListener('change', setupHint);
+['mLang', 'mQual', 'mSrc'].forEach(id => $(id).addEventListener('change', setupHint));
 $('setupCancel').onclick = () => { setupOpen = false; renderMeeting(); };
 $('setupGo').onclick = () => {
   const m = cur; if (!m) return;
   if (m.status === 'ready' && m.mom && m.mom.edited && !confirm('Redo the transcript? Your edits to the transcript and minutes will be replaced.')) return;
-  m.lang = $('mLang').value; m.nspk = +$('mNspk').value; m.quality = $('mQual').value; m.attendees = lines($('mPeople').value);
+  m.lang = $('mLang').value; m.nspk = +$('mNspk').value; m.quality = $('mQual').value; m.textSrc = $('mSrc').value; m.attendees = lines($('mPeople').value);
   setupOpen = false; process(m);
 };
 $('xDel').onclick = async () => {

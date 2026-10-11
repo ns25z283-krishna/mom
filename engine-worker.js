@@ -35,10 +35,10 @@ async function initDiarizer(models, numSpeakers) {
   await fetchModel('seg.onnx', models.segmentation);
   await fetchModel('emb.onnx', models.embedding);
   diarizer = createOfflineSpeakerDiarization(mod, {
-    segmentation: { pyannote: { model: '/seg.onnx', windowShiftRatio: 0.5 }, numThreads: 1 },
+    segmentation: { pyannote: { model: '/seg.onnx', windowShiftRatio: 0.25 }, numThreads: 1 },
     embedding: { model: '/emb.onnx', numThreads: 1 },
     clustering: { numClusters: numSpeakers > 0 ? numSpeakers : -1, threshold: 0.7 },
-    minDurationOn: 0.3, minDurationOff: 0.5,
+    minDurationOn: 0.3, minDurationOff: 0.2,
   });
   mod.FS.unlink('/seg.onnx'); mod.FS.unlink('/emb.onnx');
 }
