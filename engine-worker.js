@@ -43,7 +43,7 @@ async function initDiarizer(models, numSpeakers) {
   mod.FS.unlink('/seg.onnx'); mod.FS.unlink('/emb.onnx');
 }
 
-async function initRecognizer(models, language) {
+async function initRecognizer(models, language, task) {
   await boot();
   await fetchModel('enc.onnx', models.encoder);
   await fetchModel('dec.onnx', models.decoder);
@@ -51,7 +51,7 @@ async function initRecognizer(models, language) {
   recognizer = new OfflineRecognizer({
     featConfig: { sampleRate: 16000, featureDim: 80 },
     modelConfig: {
-      whisper: { encoder: '/enc.onnx', decoder: '/dec.onnx', language, task: 'transcribe', tailPaddings: -1 },
+      whisper: { encoder: '/enc.onnx', decoder: '/dec.onnx', language, task: task || 'transcribe', tailPaddings: -1 },
       tokens: '/tokens.txt', numThreads: 1, provider: 'cpu', modelType: 'whisper',
     },
   }, mod);
@@ -61,7 +61,7 @@ async function initRecognizer(models, language) {
 onmessage = async ({ data }) => {
   try {
     if (data.type === 'init-diarizer') { await initDiarizer(data.models, data.numSpeakers); postMessage({ type: 'ready' }); }
-    else if (data.type === 'init-recognizer') { await initRecognizer(data.models, data.language); postMessage({ type: 'ready' }); }
+    else if (data.type === 'init-recognizer') { await initRecognizer(data.models, data.language, data.task); postMessage({ type: 'ready' }); }
     else if (data.type === 'diarize') {
       const segs = diarizer.process(data.samples);
       postMessage({ type: 'segments', segments: segs.map(s => ({ start: s.start, end: s.end, speaker: s.speaker })) });

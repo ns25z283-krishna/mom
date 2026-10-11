@@ -4,88 +4,158 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Meeting Recorder</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%233355d1%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%226%22 fill=%22white%22/%3E%3C/svg%3E">
+<meta name="description" content="Record any meeting and get a speaker-labelled transcript and minutes, privately in your browser.">
 <style>
-/* Layout: app bar, then three numbered steps in one column (set up, record, transcript & minutes) */
 :root {
-  --bg: #f3f5f8; --surface: #ffffff; --raised: #f8f9fb; --fg: #18202c; --muted: #5a6475;
-  --line: #dde2ea; --accent: #2457c5; --accent-fg: #ffffff; --rec: #cf3636; --ok: #1d8049; --warn: #a86500;
-  --s1: #2457c5; --s2: #c2410c; --s3: #0f766e; --s4: #7e22ce; --s5: #b91c1c; --s6: #4d7c0f; --s7: #be185d; --s8: #475569;
+  --bg: #f4f5f7; --surface: #ffffff; --raised: #f8f9fb; --sunk: #eef0f3; --fg: #141a24; --muted: #5d6676;
+  --line: #e1e4ea; --accent: #3355d1; --accent-soft: #e9eefc; --accent-fg: #ffffff;
+  --rec: #d92d2d; --rec-soft: #fdecec; --ok: #1a7f46; --ok-soft: #e6f4ec; --warn: #9a5b00; --warn-soft: #fdf3e2;
+  --s1: #3355d1; --s2: #c2410c; --s3: #0f766e; --s4: #7e22ce; --s5: #b91c1c; --s6: #4d7c0f; --s7: #be185d; --s8: #475569;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "SF Mono", Consolas, monospace;
+  --shadow: 0 1px 2px rgb(16 24 40 / .05), 0 1px 3px rgb(16 24 40 / .06);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #10141a; --surface: #181d25; --raised: #1f2530; --fg: #e7ebf2; --muted: #9aa4b5; --line: #2a313d;
-    --accent: #7b9dff; --accent-fg: #0b1020; --rec: #ff6b6b; --ok: #4cc58a; --warn: #f0b04a;
-    --s1: #7b9dff; --s2: #fb923c; --s3: #2dd4bf; --s4: #c084fc; --s5: #f87171; --s6: #a3e635; --s7: #f472b6; --s8: #94a3b8;
-    color-scheme: dark; }
+  :root { --bg: #0e1116; --surface: #161a21; --raised: #1b2029; --sunk: #12161c; --fg: #e8ebf1; --muted: #9aa3b2; --line: #2a303b;
+    --accent: #8aa4ff; --accent-soft: #1e2744; --accent-fg: #0b1020; --rec: #ff6b6b; --rec-soft: #3a1c1f; --ok: #4cc58a; --ok-soft: #15301f; --warn: #f0b04a; --warn-soft: #3a2b12;
+    --s1: #8aa4ff; --s2: #fb923c; --s3: #2dd4bf; --s4: #c084fc; --s5: #f87171; --s6: #a3e635; --s7: #f472b6; --s8: #94a3b8;
+    --shadow: none; color-scheme: dark; }
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 var(--font); }
-.bar { background: var(--surface); border-bottom: 1px solid var(--line); }
-.bar .in { max-width: 860px; margin: 0 auto; padding-inline: 16px; padding-block: 14px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-.brand { display: flex; gap: 10px; align-items: center; font-weight: 700; font-size: 17px; }
-.logo { width: 28px; height: 28px; border-radius: 7px; background: var(--accent); display: grid; place-items: center; }
-.logo i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-fg); }
-.status { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
-main { max-width: 860px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 56px; display: grid; gap: 20px; }
-h1 { font-size: 26px; margin: 0; text-wrap: balance; }
-h2 { font-size: 18px; margin: 0; display: flex; gap: 10px; align-items: center; }
-h3 { font-size: 15px; margin: 0; }
+html { scroll-padding-top: 130px; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 var(--font); -webkit-font-smoothing: antialiased; }
+h1 { font-size: 24px; line-height: 1.25; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+h2 { font-size: 16px; margin: 0; }
+h3 { font-size: 14px; margin: 0; }
 p { margin: 0; }
-.lead { color: var(--muted); max-width: 70ch; }
-.step { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); font-size: 14px; display: inline-grid; place-items: center; flex: none; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: grid; gap: 16px; min-width: 0; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+a { color: var(--accent); }
+
+/* Top bar */
+.top { position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top .in { max-width: 1180px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.brand { display: flex; gap: 10px; align-items: center; font-weight: 700; font-size: 16px; margin-right: auto; color: var(--fg); text-decoration: none; }
+.logo { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; flex: none; }
+.logo i { width: 11px; height: 11px; border-radius: 50%; background: var(--accent-fg); }
+nav { display: flex; gap: 4px; flex-wrap: wrap; }
+nav a { text-decoration: none; color: var(--muted); font-weight: 600; font-size: 14px; padding: 7px 12px; border-radius: 8px; }
+nav a:hover { color: var(--fg); background: var(--sunk); }
+nav a[aria-current=page] { color: var(--accent); background: var(--accent-soft); }
+.pill { font: 600 13px var(--font); border-radius: 999px; padding: 5px 12px; border: 1px solid var(--line); background: var(--raised); color: var(--fg); display: inline-flex; gap: 8px; align-items: center; cursor: pointer; font-variant-numeric: tabular-nums; }
+.pill.rec { border-color: var(--rec); color: var(--rec); background: var(--rec-soft); }
+
+main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+.view { display: grid; gap: 20px; }
+.head { display: flex; gap: 12px 20px; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; }
+.head > div { display: grid; gap: 4px; min-width: 0; }
+.head > div.row { display: flex; gap: 8px; }
+.lead { color: var(--muted); max-width: 72ch; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 16px; min-width: 0; box-shadow: var(--shadow); align-content: start; }
+.card-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
-label, .lbl { font-weight: 600; font-size: 13px; letter-spacing: .02em; }
-input[type=text], textarea, select { width: 100%; font: inherit; color: var(--fg); background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
-textarea { min-height: 84px; resize: vertical; }
+.rec-layout { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .rec-layout { grid-template-columns: 1fr; } }
+
+label, .lbl { font-weight: 600; font-size: 13px; }
+input[type=text], input[type=search], textarea, select { width: 100%; font: inherit; font-size: 14px; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: .8; }
+textarea { min-height: 80px; resize: vertical; }
 .field { display: grid; gap: 6px; min-width: 0; }
-.opts { display: grid; gap: 8px; }
-.opt { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; letter-spacing: 0; font-size: 14px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; background: var(--raised); }
-.opt input { margin-top: 4px; }
-.opt b { display: block; }
-.opt span { color: var(--muted); }
-details { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: var(--raised); }
-summary { cursor: pointer; font-weight: 600; font-size: 14px; }
-details ol { margin: 10px 0 2px; padding-left: 20px; display: grid; gap: 4px; color: var(--muted); }
-details ol b { color: var(--fg); }
-.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.hint { font-size: 13px; color: var(--muted); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 10px; padding: 3px; background: var(--sunk); gap: 3px; }
+.seg label { display: grid; gap: 1px; text-align: center; padding: 7px 8px; border-radius: 7px; cursor: pointer; font-size: 14px; }
+.seg label small { font-weight: 400; color: var(--muted); font-size: 12px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) { background: var(--surface); box-shadow: var(--shadow); color: var(--accent); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--accent); }
+.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; font-size: 14px; cursor: pointer; }
+.check input { margin-top: 4px; accent-color: var(--accent); }
+.check span small { display: block; color: var(--muted); font-size: 13px; }
+details.more { border: 1px solid var(--line); border-radius: 10px; background: var(--raised); }
+details.more > summary { cursor: pointer; font-weight: 600; font-size: 14px; padding: 10px 14px; }
+details.more > div { padding: 0 14px 14px; display: grid; gap: 12px; }
+details.more ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--muted); font-size: 14px; }
+details.more ol b { color: var(--fg); }
+
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .spread { justify-content: space-between; }
-button, .btn { font: inherit; font-weight: 600; border-radius: 8px; padding: 9px 16px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+button, .btn { font: inherit; font-size: 14px; font-weight: 600; border-radius: 8px; padding: 8px 14px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; justify-content: center; white-space: nowrap; text-decoration: none; }
 button:hover:not(:disabled), .btn:hover { border-color: var(--accent); }
-button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [contenteditable]:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
-button.stop { background: var(--rec); border-color: var(--rec); color: #fff; }
-button.small { padding: 5px 10px; font-size: 13px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary, .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+button.danger { color: var(--rec); }
+button.ghost { border-color: transparent; background: none; }
+button.ghost:hover:not(:disabled) { background: var(--sunk); border-color: transparent; }
+button.sm { padding: 5px 10px; font-size: 13px; }
+button.icon { padding: 5px 8px; font-size: 13px; color: var(--muted); }
 button:disabled { opacity: .45; cursor: default; }
-.timer { font: 600 30px var(--mono); font-variant-numeric: tabular-nums; }
+
+/* Recorder */
+.recbox { display: grid; gap: 18px; }
+.rec-top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: space-between; }
+.clock { display: flex; align-items: center; gap: 12px; }
+.timer { font: 600 34px var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.state { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--line); flex: none; }
 .dot.on { background: var(--rec); animation: pulse 1.2s infinite; }
 @keyframes pulse { 50% { opacity: .3; } }
-@media (prefers-reduced-motion: reduce) { .dot.on { animation: none; } }
-.meter { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); }
-.track { height: 8px; background: var(--raised); border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .dot.on, .stages li.active::before { animation: none; } }
+.recbtn { background: var(--rec); border-color: var(--rec); color: #fff; font-size: 16px; padding: 12px 22px; border-radius: 999px; }
+.recbtn i { width: 12px; height: 12px; border-radius: 50%; background: #fff; }
+.stopbtn { background: var(--fg); border-color: var(--fg); color: var(--surface); }
+.stopbtn i { width: 11px; height: 11px; border-radius: 2px; background: var(--surface); }
+.meters { display: grid; gap: 8px; }
+.meter { display: grid; grid-template-columns: 90px 1fr; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); }
+.track { height: 8px; background: var(--sunk); border-radius: 5px; overflow: hidden; }
 .track i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .08s linear; }
-.msg { font-size: 14px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); }
-.msg.err { border-color: var(--rec); color: var(--rec); }
-.msg.good { border-color: var(--ok); color: var(--ok); }
-.small { font-size: 13px; color: var(--muted); }
-.tags { display: flex; flex-wrap: wrap; gap: 8px; }
-.tags button { padding: 7px 12px; font-size: 14px; }
-.tags button.cur { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
-.tags kbd { font: 12px var(--mono); opacity: .7; }
-.live { min-height: 110px; max-height: 300px; overflow: auto; background: var(--raised); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; align-content: start; font-size: 14px; }
-.live:empty::before { content: "The conversation will appear here while you record."; color: var(--muted); }
-.live .ln { display: grid; grid-template-columns: auto 1fr; gap: 8px; }
+.msg { font-size: 14px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--raised); }
+.msg.err { border-color: var(--rec); color: var(--rec); background: var(--rec-soft); }
+.msg.good { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); }
+.msg.warn { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+.live { height: 320px; overflow: auto; background: var(--raised); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 10px; align-content: start; font-size: 15px; }
+.live .ph { color: var(--muted); font-size: 14px; }
+.ln { display: grid; grid-template-columns: 62px 1fr; gap: 10px; }
+.ln .who { font-weight: 700; margin-right: 6px; }
+.ln .orig { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.ln.interim { color: var(--muted); font-style: italic; }
 .ts { font: 12px/1.9 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
-.live .who { font-weight: 600; margin-right: 6px; }
-.live .interim { color: var(--muted); font-style: italic; }
-/* Transcript step */
-.progress { display: grid; gap: 8px; }
-.pbar { height: 10px; border-radius: 6px; background: var(--raised); border: 1px solid var(--line); overflow: hidden; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tags button { font-weight: 500; }
+.tags button.cur { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.tags kbd { font: 11px var(--mono); opacity: .7; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; }
+
+/* Meetings list */
+.list { display: grid; gap: 10px; }
+.item { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
+.item a { color: var(--fg); text-decoration: none; font-weight: 600; font-size: 15px; }
+.item a:hover { color: var(--accent); }
+.item .sub { font-size: 13px; color: var(--muted); }
+.badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--sunk); color: var(--muted); }
+.badge.ok { background: var(--ok-soft); color: var(--ok); }
+.badge.busy { background: var(--accent-soft); color: var(--accent); }
+.badge.err { background: var(--rec-soft); color: var(--rec); }
+.emptybox { text-align: center; padding: 40px 20px; color: var(--muted); display: grid; gap: 12px; justify-items: center; }
+
+/* Meeting page */
+.back { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; }
+.back:hover { color: var(--accent); }
+input.mtitle { font: 700 24px/1.25 var(--font); border: 1px solid transparent; background: none; padding: 2px 6px; margin-left: -7px; width: 100%; color: var(--fg); border-radius: 8px; }
+input.mtitle:hover { border-color: var(--line); }
+input.mtitle:focus { border-color: var(--accent); background: var(--surface); }
+.player { position: sticky; top: 57px; z-index: 10; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; box-shadow: var(--shadow); }
+audio { width: 100%; display: block; height: 40px; }
+.menu { position: relative; }
+.menu > summary { list-style: none; }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px; display: grid; min-width: 220px; box-shadow: 0 8px 24px rgb(16 24 40 / .14); }
+.menu-list button { justify-content: flex-start; border: 0; font-weight: 500; }
+.menu-list button:hover:not(:disabled) { background: var(--sunk); }
+.menu-list hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100%; }
+.progress { display: grid; gap: 10px; }
+.pbar { height: 8px; border-radius: 6px; background: var(--sunk); overflow: hidden; }
 .pbar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
 .stages { display: grid; gap: 4px; font-size: 14px; list-style: none; margin: 0; padding: 0; }
 .stages li { display: flex; gap: 8px; align-items: center; color: var(--muted); }
@@ -93,209 +163,327 @@ button:disabled { opacity: .45; cursor: default; }
 .stages li.active { color: var(--fg); font-weight: 600; }
 .stages li.active::before { border-color: var(--accent); background: var(--accent); animation: pulse 1.2s infinite; }
 .stages li.done::before { border-color: var(--ok); background: var(--ok); }
-audio { width: 100%; }
-.speakers { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
-.spk { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; background: var(--raised); border-left: 4px solid var(--c); }
-.spk input { padding: 5px 8px; font-weight: 600; }
-.spk .meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.share { height: 6px; border-radius: 4px; background: var(--line); overflow: hidden; }
-.share i { display: block; height: 100%; background: var(--c); }
-.tx { display: grid; gap: 2px; max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--raised); padding: 6px; }
-.tx .r { display: grid; grid-template-columns: 70px 150px 1fr; gap: 10px; padding: 6px 8px; border-radius: 6px; align-items: start; }
-.tx .r:hover { background: var(--surface); }
-.tx .r.playing { background: var(--surface); box-shadow: inset 3px 0 0 var(--accent); }
-.tx .r button.ts { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; color: var(--muted); }
-.tx .r button.ts:hover { color: var(--accent); }
-.tx select { padding: 2px 6px; font-weight: 600; color: var(--c); border-color: transparent; background: transparent; }
-.tx .t { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
-.tx .t.pending { color: var(--muted); font-style: italic; }
-@media (max-width: 640px) { .tx .r { grid-template-columns: 1fr; gap: 2px; } }
-.mom { border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; background: var(--raised); display: grid; gap: 12px; }
-.mom h4 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-.mom ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
-.mom table { border-collapse: collapse; width: 100%; font-size: 14px; }
-.mom th, .mom td { text-align: left; border-bottom: 1px solid var(--line); padding: 6px 8px; vertical-align: top; }
-.mom th { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--muted); padding: 10px 14px; }
+.tabs button[aria-selected=true] { color: var(--accent); border-bottom-color: var(--accent); }
+.tabs button:hover { color: var(--fg); }
+.panel { display: grid; gap: 16px; padding-top: 4px; }
+
+/* Minutes */
+.mom { display: grid; gap: 22px; }
+.mom section { display: grid; gap: 8px; }
+.sec-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sec-h h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.elist { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.elist li { display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: start; padding: 4px 6px; border-radius: 6px; }
+.elist li::before { content: "•"; color: var(--muted); line-height: 1.55; }
+.elist li:hover { background: var(--raised); }
+.elist li .x { visibility: hidden; }
+.elist li:hover .x, .elist li:focus-within .x { visibility: visible; }
+[contenteditable] { outline: none; border-radius: 4px; min-width: 2ch; }
+[contenteditable]:hover { background: var(--sunk); }
+[contenteditable]:focus { background: var(--surface); box-shadow: 0 0 0 2px var(--accent); }
+[contenteditable]:empty::before { content: attr(data-ph); color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .tablewrap { overflow-x: auto; }
-.empty { color: var(--muted); font-style: italic; }
-.note { font-size: 13px; color: var(--warn); }
+table.actions { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 620px; table-layout: fixed; }
+table.actions th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+table.actions th:nth-child(1) { width: 56px; } table.actions th:nth-child(3) { width: 170px; } table.actions th:nth-child(4) { width: 140px; } table.actions th:nth-child(5) { width: 44px; }
+table.actions td { padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.actions input[type=text] { border-color: transparent; background: none; padding: 6px; }
+table.actions input[type=text]:hover { border-color: var(--line); }
+table.actions input[type=text]:focus { border-color: var(--accent); background: var(--surface); }
+table.actions tr.done input[type=text]:first-child { text-decoration: line-through; color: var(--muted); }
+.attend { color: var(--fg); }
+
+/* Transcript */
+.findbar { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
+@media (max-width: 640px) { .findbar { grid-template-columns: 1fr; } }
+.tx { display: grid; gap: 2px; }
+.tx .r { display: grid; grid-template-columns: 64px 160px 1fr; gap: 10px; padding: 7px 8px; border-radius: 8px; align-items: start; scroll-margin-top: 140px; }
+.tx .r:hover { background: var(--raised); }
+.tx .r.playing { background: var(--accent-soft); }
+.tx .r.hit { box-shadow: inset 3px 0 0 var(--warn); background: var(--warn-soft); }
+.tx .r button.ts { border: 0; background: none; padding: 0; justify-content: flex-start; color: var(--muted); font-weight: 400; }
+.tx .r button.ts:hover { color: var(--accent); }
+.tx select { padding: 2px 4px; font-weight: 700; color: var(--c); border-color: transparent; background: transparent; font-size: 14px; }
+.tx select:hover { border-color: var(--line); }
+.tx .t { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; padding: 0 4px; }
+.tx .t.pending { color: var(--muted); font-style: italic; }
+@media (max-width: 640px) { .tx .r { grid-template-columns: 56px 1fr; } .tx .r .t { grid-column: 1 / -1; } }
+
+/* Speakers */
+.speakers { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.spk { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; background: var(--raised); border-top: 4px solid var(--c); }
+.spk input { font-weight: 700; }
+.spk .meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.share { height: 6px; border-radius: 4px; background: var(--sunk); overflow: hidden; }
+.share i { display: block; height: 100%; background: var(--c); }
+.spk select { font-size: 13px; padding: 5px 8px; }
+
+/* Word list */
+table.repl { border-collapse: collapse; width: 100%; font-size: 14px; }
+table.repl td, table.repl th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+table.repl th { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.tryout { background: var(--raised); border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; min-height: 44px; }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 50; background: var(--fg); color: var(--surface); padding: 10px 16px; border-radius: 10px; font-size: 14px; box-shadow: 0 8px 24px rgb(0 0 0 / .2); max-width: calc(100vw - 32px); }
+.foot { margin-top: 28px; font-size: 12px; color: var(--muted); text-align: center; }
 </style>
 </head>
 <body>
-<div class="bar"><div class="in">
-  <div class="brand"><span class="logo"><i></i></span>Meeting Recorder</div>
-  <div class="status"><span class="dot" id="topDot"></span><span id="topStatus">Ready</span></div>
-</div></div>
+<header class="top"><div class="in">
+  <a class="brand" href="#/record"><span class="logo"><i></i></span>Meeting Recorder</a>
+  <nav aria-label="Main">
+    <a href="#/record" data-nav="record">New meeting</a>
+    <a href="#/meetings" data-nav="meetings">My meetings</a>
+    <a href="#/words" data-nav="words">Word list</a>
+  </nav>
+  <button class="pill" id="pill" type="button" hidden></button>
+</div></header>
 
 <main>
-  <header style="display:grid;gap:8px">
-    <h1>Record a meeting and get a transcript with every speaker</h1>
-    <p class="lead">Records the whole conversation into an MP3, then works out who spoke when (Speaker 1, Speaker 2...) and writes everything they said, plus a draft of the minutes. All of it runs here in your browser: your recording is never uploaded.</p>
-  </header>
+<!-- ============ New meeting ============ -->
+<section class="view" id="v-record" hidden>
+  <div class="head">
+    <div>
+      <h1>New meeting</h1>
+      <p class="lead">Record any Zoom, Teams or Meet call, or a meeting in a room. You get an MP3, live captions, a transcript with every speaker numbered, and draft minutes. Everything stays in your browser.</p>
+    </div>
+    <label class="btn" for="fileIn">Import a recording…</label>
+  </div>
 
-  <!-- Step 1 -->
-  <section class="card" aria-labelledby="s1">
-    <h2 id="s1"><span class="step">1</span>Set up</h2>
-    <div class="grid2">
+  <div class="rec-layout">
+    <section class="card" aria-labelledby="setupH">
+      <h2 id="setupH">Meeting details</h2>
       <div class="field">
         <label for="title">Meeting name</label>
-        <input type="text" id="title" placeholder="e.g. Weekly project sync">
+        <input type="text" id="title" placeholder="e.g. Weekly project sync" autocomplete="off">
       </div>
       <div class="field">
-        <label for="nspk">How many people will speak?</label>
-        <select id="nspk">
-          <option value="0">Work it out automatically</option>
-          <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
-        </select>
-      </div>
-    </div>
-    <div class="field">
-      <label for="people">Attendees (optional, one per line, you first)</label>
-      <textarea id="people" placeholder="Reddy&#10;Priya&#10;Arjun"></textarea>
-      <p class="small">When someone says "this is Priya" or "I'm Arjun", their speaker number is renamed automatically. Names in this list help it spell them correctly.</p>
-    </div>
-    <div class="grid2">
-      <div class="field">
-        <span class="lbl">Where is the meeting?</span>
-        <div class="opts">
-          <label class="opt"><input type="radio" name="mode" id="modeOnline" value="online" checked>
-            <div><b>Online call</b><span>Your mic plus the Zoom, Teams or Meet audio.</span></div></label>
-          <label class="opt"><input type="radio" name="mode" id="modeRoom" value="room">
-            <div><b>In a room</b><span>Only the microphone. Put the laptop in the middle of the table.</span></div></label>
+        <span class="lbl">Where is it?</span>
+        <div class="seg" role="radiogroup" aria-label="Where is the meeting">
+          <label><input type="radio" name="mode" id="modeOnline" value="online" checked>Online call<small>Mic + call audio</small></label>
+          <label><input type="radio" name="mode" id="modeRoom" value="room">In a room<small>Mic only</small></label>
         </div>
       </div>
       <div class="field">
-        <span class="lbl">Options</span>
-        <div class="opts">
-          <label class="opt"><input type="checkbox" id="autoTx" checked>
-            <div><b>Make the transcript when I stop</b><span>Starts straight after the recording is saved.</span></div></label>
-          <label class="opt" id="videoOpt"><input type="checkbox" id="withVideo">
-            <div><b>Also save a screen video</b><span>Online calls only. A much bigger file.</span></div></label>
-        </div>
+        <label for="lang">Language spoken</label>
+        <select id="lang"></select>
+        <p class="hint" id="langHint"></p>
       </div>
-    </div>
-    <details>
-      <summary>How to record an online call</summary>
-      <ol>
-        <li>Wear <b>headphones</b> so the call doesn't echo into your mic.</li>
-        <li>Press <b>Start recording</b> and allow the microphone.</li>
-        <li>A share window opens. <b>Windows:</b> pick "Entire screen" and turn on <b>"Also share system audio"</b>. This works with the Zoom or Teams desktop app. <b>Mac:</b> join the meeting in a Chrome tab (Meet, or the Zoom or Teams web version), pick <b>that tab</b>, and turn on <b>"Also share tab audio"</b>.</li>
-        <li>Ask everyone to say their name once at the start ("Hi, this is Priya").</li>
-        <li>Press <b>Stop and save</b> when the meeting ends.</li>
-      </ol>
-    </details>
-  </section>
+      <div class="field">
+        <label for="people">Attendees <span class="hint">(optional, one per line, you first)</span></label>
+        <textarea id="people" placeholder="Reddy&#10;Priya&#10;Arjun"></textarea>
+        <p class="hint">Speakers who say "I'm Priya" are named automatically, and these names are always spelled right.</p>
+      </div>
+      <details class="more">
+        <summary>More options</summary>
+        <div>
+          <div class="field">
+            <label for="nspk">Number of speakers</label>
+            <select id="nspk">
+              <option value="0">Work it out automatically</option>
+              <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="quality">Transcript accuracy</label>
+            <select id="quality"><option value="auto">Best for the language (recommended)</option><option value="standard">Standard: fastest</option><option value="high">High: most accurate, about 3x slower</option></select>
+            <p class="hint">"Best" uses High for Hindi and other languages and Standard for English. High downloads 375 MB more the first time.</p>
+          </div>
+          <label class="check"><input type="checkbox" id="autoTx" checked><span>Make the transcript and minutes when I stop<small>Starts straight after the recording is saved.</small></span></label>
+          <label class="check"><input type="checkbox" id="saveCopy" checked><span>Also save the MP3 to my Downloads<small>A backup copy. The meeting is kept in My meetings either way.</small></span></label>
+          <label class="check" id="videoOpt"><input type="checkbox" id="withVideo"><span>Also save a screen video<small>Online calls only. Saved to Downloads; a much bigger file.</small></span></label>
+        </div>
+      </details>
+      <details class="more">
+        <summary>How to record an online call</summary>
+        <div><ol>
+          <li>Wear <b>headphones</b> so the call doesn't echo into your mic.</li>
+          <li>Press <b>Start recording</b> and allow the microphone.</li>
+          <li>A share window opens. <b>Windows:</b> pick "Entire screen" and turn on <b>"Also share system audio"</b> (works with the Zoom or Teams app). <b>Mac:</b> join in a Chrome tab (Meet, or Zoom/Teams on the web), pick <b>that tab</b> and turn on <b>"Also share tab audio"</b>.</li>
+          <li>Ask everyone to say their name once at the start ("Hi, this is Priya").</li>
+          <li>Press <b>Stop</b> when the meeting ends.</li>
+        </ol></div>
+      </details>
+    </section>
 
-  <!-- Step 2 -->
-  <section class="card" aria-labelledby="s2">
-    <div class="row spread">
-      <h2 id="s2"><span class="step">2</span>Record</h2>
-      <div class="row"><span class="dot" id="dot"></span><span class="timer" id="timer">00:00:00</span></div>
+    <section class="card recbox" aria-labelledby="recH">
+      <h2 id="recH" class="sr" hidden>Recorder</h2>
+      <div class="rec-top">
+        <div class="clock"><span class="dot" id="dot"></span><span class="timer" id="timer">00:00:00</span><span class="state" id="recState">Ready</span></div>
+        <div class="row">
+          <button class="recbtn" id="start" type="button"><i></i>Start recording</button>
+          <button id="pause" type="button" hidden>Pause</button>
+          <button class="stopbtn" id="stop" type="button" hidden><i></i>Stop</button>
+        </div>
+      </div>
+      <div class="meters">
+        <div class="meter"><span>Your mic</span><div class="track"><i id="mMic"></i></div></div>
+        <div class="meter" id="sysMeter"><span>Call audio</span><div class="track"><i id="mSys"></i></div></div>
+      </div>
+      <div id="msg" class="msg" hidden></div>
+
+      <div class="field">
+        <div class="card-h">
+          <h2>Live captions</h2>
+          <div class="row">
+            <label class="check" style="align-items:center"><input type="checkbox" id="showOrig" style="margin:0"><span>Show original too</span></label>
+            <label class="check" style="align-items:center"><input type="checkbox" id="liveOn" checked style="margin:0"><span>On</span></label>
+          </div>
+        </div>
+        <div class="live" id="live" aria-live="polite"><p class="ph">Captions appear here while you record. Other languages are translated to English as people speak.</p></div>
+        <p class="hint" id="liveNote">Live captions use Chrome's or Edge's speech service, which needs internet. The final transcript is made offline in this page and is more accurate about who said what.</p>
+      </div>
+
+      <div class="field">
+        <h2>Who is speaking? <span class="hint" style="font-weight:400">(optional)</span></h2>
+        <p class="hint">Tap a name, or press its number key, when someone starts talking. It labels the live captions.</p>
+        <div class="tags" id="tags"></div>
+      </div>
+    </section>
+  </div>
+</section>
+
+<!-- ============ My meetings ============ -->
+<section class="view" id="v-meetings" hidden>
+  <div class="head">
+    <div>
+      <h1>My meetings</h1>
+      <p class="lead">Saved in this browser on this computer. Download anything you want to keep elsewhere.</p>
+    </div>
+    <label class="btn" for="fileIn">Import a recording…</label>
+  </div>
+  <div class="list" id="mlist"></div>
+  <p class="hint" id="storeNote"></p>
+</section>
+
+<!-- ============ Word list ============ -->
+<section class="view" id="v-words" hidden>
+  <div class="head"><div>
+    <h1>Word list</h1>
+    <p class="lead">Teach the recorder your names and special words. Captions and transcripts are corrected with this list in every meeting.</p>
+  </div></div>
+  <div class="grid2" style="align-items:start">
+    <section class="card">
+      <h2>Names and special words</h2>
+      <div class="field">
+        <label for="vocab">One per line, spelled the way you want them</label>
+        <textarea id="vocab" style="min-height:180px" placeholder="NoonRay&#10;Priya&#10;Kubernetes"></textarea>
+        <p class="hint">Words that sound like these are fixed automatically. For example, with NoonRay in the list, "no entry", "noon ray" and "nunre" become NoonRay. Saved automatically.</p>
+      </div>
+      <div class="field">
+        <label for="tryIn">Try it</label>
+        <input type="text" id="tryIn" placeholder="Type a sentence, e.g. Welcome to no entry">
+        <div class="tryout" id="tryOut"></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Always replace</h2>
+      <p class="hint">Exact fixes, applied first. Add them here, or tick "Remember" when you use Replace in a transcript.</p>
+      <div class="findbar">
+        <input type="text" id="rFrom" placeholder="Heard as (e.g. new array)" aria-label="Heard as">
+        <input type="text" id="rTo" placeholder="Replace with (e.g. NoonRay)" aria-label="Replace with">
+        <button id="rAdd" type="button">Add</button>
+      </div>
+      <div class="tablewrap"><table class="repl"><thead><tr><th>Heard as</th><th>Becomes</th><th></th></tr></thead><tbody id="rList"></tbody></table></div>
+    </section>
+  </div>
+</section>
+
+<!-- ============ One meeting ============ -->
+<section class="view" id="v-meeting" hidden>
+  <a class="back" href="#/meetings">← My meetings</a>
+  <div class="head" style="align-items:flex-start">
+    <div style="flex:1">
+      <input class="mtitle" id="mTitle" type="text" aria-label="Meeting name">
+      <p class="hint" id="mMeta"></p>
     </div>
     <div class="row">
-      <button class="primary" id="start">Start recording</button>
-      <button id="pause" disabled>Pause</button>
-      <button class="stop" id="stop" disabled>Stop and save</button>
-    </div>
-    <div class="meter"><span>You (mic)</span><div class="track"><i id="mMic"></i></div></div>
-    <div class="meter" id="sysMeter"><span>Call audio</span><div class="track"><i id="mSys"></i></div></div>
-    <div id="msg" class="msg" hidden></div>
-
-    <div class="field">
-      <div class="row spread">
-        <h3>Live captions</h3>
-        <div class="row">
-          <label class="row" style="gap:6px;font-weight:400"><input type="checkbox" id="liveOn" checked> Show</label>
-          <select id="lang" aria-label="Caption language" style="width:auto">
-            <option value="en-IN">English (India)</option>
-            <option value="en-US">English (US)</option>
-            <option value="en-GB">English (UK)</option>
-            <option value="hi-IN">Hindi</option>
-            <option value="te-IN">Telugu</option>
-            <option value="ta-IN">Tamil</option>
-            <option value="kn-IN">Kannada</option>
-            <option value="ml-IN">Malayalam</option>
-          </select>
+      <button class="primary" id="xDoc" type="button">Download Word</button>
+      <button id="xPdf" type="button">Print / PDF</button>
+      <details class="menu" id="moreMenu">
+        <summary class="btn">More ▾</summary>
+        <div class="menu-list">
+          <button id="xCopy" type="button">Copy minutes</button>
+          <button id="xTxt" type="button">Download text (.txt)</button>
+          <button id="xSrt" type="button">Download subtitles (.srt)</button>
+          <button id="xMp3" type="button">Download audio (MP3)</button>
+          <hr>
+          <button id="xRedo" type="button">Redo transcript…</button>
+          <button id="xDel" type="button" class="danger">Delete meeting</button>
         </div>
-      </div>
-      <div class="live" id="live" aria-live="polite"></div>
-      <p class="small" id="liveNote">A quick live draft from Chrome's or Edge's own speech service, which needs internet and sends the audio to Google or Microsoft. Untick "Show" to keep everything on your computer. The full transcript in step 3 is made offline, in this page.</p>
+      </details>
     </div>
+  </div>
 
-    <div class="field">
-      <h3>Who is speaking? (optional)</h3>
-      <p class="small">Tap a name, or press its number key, when someone starts talking. It labels the live captions.</p>
-      <div class="tags" id="tags"></div>
-    </div>
-  </section>
+  <div class="player"><audio id="player" controls preload="metadata"></audio></div>
 
-  <!-- Step 3 -->
-  <section class="card" aria-labelledby="s3">
-    <div class="row spread">
-      <h2 id="s3"><span class="step">3</span>Transcript and minutes</h2>
-      <label class="btn" for="fileIn">Open a recording…</label>
-      <input type="file" id="fileIn" accept="audio/*,video/*,.mp3,.m4a,.wav,.webm,.mp4" hidden>
-    </div>
+  <section class="card" id="setup" hidden>
+    <div class="card-h"><h2 id="setupTitle">Make the transcript</h2><button class="ghost sm" id="setupCancel" type="button">Cancel</button></div>
     <div class="grid2">
-      <div class="field">
-        <label for="txLang">Language spoken</label>
-        <select id="txLang">
-          <option value="en">English</option>
-          <option value="hi">Hindi</option>
-          <option value="te">Telugu</option>
-          <option value="ta">Tamil</option>
-          <option value="kn">Kannada</option>
-          <option value="ml">Malayalam</option>
-          <option value="">Detect automatically</option>
-        </select>
-      </div>
-      <div class="field">
-        <span class="lbl">Recording</span>
-        <p class="small" id="srcInfo">Record a meeting above, or open an MP3, M4A, WAV or video file.</p>
-      </div>
+      <div class="field"><label for="mLang">Language spoken</label><select id="mLang"></select></div>
+      <div class="field"><label for="mNspk">Number of speakers</label><select id="mNspk"></select></div>
+      <div class="field"><label for="mQual">Accuracy</label><select id="mQual"><option value="auto">Best for the language (recommended)</option><option value="standard">Standard: fastest</option><option value="high">High: most accurate, about 3x slower</option></select></div>
     </div>
-
-    <div class="progress" id="prog" hidden>
-      <ul class="stages" id="stages">
-        <li data-k="audio">Preparing the audio</li>
-        <li data-k="models">Loading the speech models (first time: about 190 MB, then saved in your browser)</li>
-        <li data-k="speakers">Finding the speakers</li>
-        <li data-k="text">Writing the transcript</li>
-      </ul>
-      <div class="pbar"><i id="pbar"></i></div>
-      <div class="row spread small"><span id="ptext"></span><span id="peta"></span></div>
-    </div>
-    <div id="txErr" class="msg err" hidden></div>
-
-    <div id="results" hidden style="display:grid;gap:18px">
-      <audio id="player" controls preload="metadata"></audio>
-      <div class="field">
-        <div class="row spread"><h3>Speakers</h3><span class="small">Type a name to rename a speaker everywhere. Press ▶ to hear them.</span></div>
-        <div class="speakers" id="speakers"></div>
-      </div>
-      <div class="field">
-        <div class="row spread">
-          <h3>Minutes (draft)</h3>
-          <button class="small" id="refreshMom" type="button">Refresh minutes</button>
-        </div>
-        <div class="mom" id="mom"></div>
-        <p class="small">Picked out automatically from what was said. Check it before you send it.</p>
-      </div>
-      <div class="field">
-        <div class="row spread"><h3>Full transcript</h3><span class="small">Click a time to play it. Click any text to correct it. Change a speaker from its menu.</span></div>
-        <div class="tx" id="tx"></div>
-      </div>
-      <div class="row">
-        <button class="primary" id="dlDoc" type="button">Download Word document</button>
-        <button id="dlTxt" type="button">Download text</button>
-        <button id="dlSrt" type="button">Download subtitles (.srt)</button>
-        <button id="copyTx" type="button">Copy transcript</button>
-      </div>
-    </div>
+    <div class="field"><label for="mPeople">Attendees <span class="hint">(optional, one per line)</span></label><textarea id="mPeople" style="min-height:64px"></textarea></div>
+    <p class="hint" id="setupHint"></p>
+    <div><button class="primary" id="setupGo" type="button">Make transcript and minutes</button></div>
   </section>
 
-  <p class="small">Speech engines: sherpa-onnx, pyannote segmentation, 3D-Speaker and OpenAI Whisper (base), running in your browser. MP3 encoding: lamejs.</p>
+  <section class="card progress" id="prog" hidden>
+    <ul class="stages" id="stages">
+      <li data-k="audio">Preparing the audio</li>
+      <li data-k="models">Loading the speech models</li>
+      <li data-k="speakers">Finding the speakers</li>
+      <li data-k="text">Writing the transcript</li>
+    </ul>
+    <div class="pbar"><i id="pbar"></i></div>
+    <div class="row spread hint"><span id="ptext"></span><span id="peta"></span></div>
+    <p class="hint">You can keep working in other tabs. Keep this tab open until it finishes.</p>
+  </section>
+  <div id="mErr" class="msg err" hidden></div>
+
+  <div id="mBody" hidden>
+    <div class="tabs" role="tablist">
+      <button role="tab" type="button" data-tab="minutes" aria-selected="true">Minutes</button>
+      <button role="tab" type="button" data-tab="tx">Transcript</button>
+      <button role="tab" type="button" data-tab="spk">Speakers</button>
+      <button role="tab" type="button" data-tab="live">Live captions</button>
+    </div>
+    <div class="panel" id="p-minutes" role="tabpanel"></div>
+    <div class="panel" id="p-tx" role="tabpanel" hidden>
+      <div class="card" style="gap:10px">
+        <div class="findbar">
+          <input type="search" id="fFind" placeholder="Find in transcript" aria-label="Find">
+          <input type="text" id="fRep" placeholder="Replace with" aria-label="Replace with">
+          <button id="fGo" type="button">Replace all</button>
+        </div>
+        <div class="row spread">
+          <label class="check" style="align-items:center"><input type="checkbox" id="fRemember" checked style="margin:0"><span>Remember this fix for future meetings</span></label>
+          <span class="hint" id="fCount"></span>
+        </div>
+      </div>
+      <p class="hint">Click a time to play from there. Click any text to correct it. Pick a different speaker from the name menu.</p>
+      <div class="tx" id="tx"></div>
+    </div>
+    <div class="panel" id="p-spk" role="tabpanel" hidden>
+      <p class="hint">Type a name to rename a speaker everywhere. Press ▶ to hear them. If one person was split into two speakers, use "Same person as".</p>
+      <div class="speakers" id="speakers"></div>
+    </div>
+    <div class="panel" id="p-live" role="tabpanel" hidden>
+      <p class="hint">What the live captions showed during the recording (a quick draft, labelled by the speaker you tapped).</p>
+      <div class="live" id="liveSaved" style="height:auto;max-height:none"></div>
+    </div>
+  </div>
+</section>
+
+<p class="foot">Runs in your browser with sherpa-onnx, pyannote, 3D-Speaker and OpenAI Whisper. MP3 encoding by lamejs. Recordings never leave this computer; live captions use the browser's speech service.</p>
 </main>
+
+<input type="file" id="fileIn" accept="audio/*,video/*,.mp3,.m4a,.wav,.webm,.mp4,.ogg,.aac" hidden>
+<div class="toast" id="toast" role="status" hidden></div>
 
 <script>/* lamejs 1.2.1 MP3 encoder, LGPL, https://github.com/zhuker/lamejs */
 function lamejs(){function X(c){return new Int32Array(c)}function K(c){return new Float32Array(c)}function ca(c){if(1==c.length)return K(c[0]);var k=c[0];c=c.slice(1);for(var n=[],u=0;u<k;u++)n.push(ca(c));return n}function Ia(c){if(1==c.length)return X(c[0]);var k=c[0];c=c.slice(1);for(var n=[],u=0;u<k;u++)n.push(Ia(c));return n}function dc(c){if(1==c.length)return new Int16Array(c[0]);var k=c[0];c=c.slice(1);for(var n=[],u=0;u<k;u++)n.push(dc(c));return n}function Ob(c){if(1==c.length)return Array(c[0]);
@@ -608,7 +796,178 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
 
 </script>
 <script>
+'use strict';
 const $ = id => document.getElementById(id);
+const LANGS = {
+  en: { name: 'English', sr: 'en-IN', w: 'en' },
+  hi: { name: 'Hindi or Hinglish', sr: 'hi-IN', w: 'hi' },
+  te: { name: 'Telugu', sr: 'te-IN', w: 'te' },
+  ta: { name: 'Tamil', sr: 'ta-IN', w: 'ta' },
+  kn: { name: 'Kannada', sr: 'kn-IN', w: 'kn' },
+  ml: { name: 'Malayalam', sr: 'ml-IN', w: 'ml' },
+  mr: { name: 'Marathi', sr: 'mr-IN', w: 'mr' },
+  bn: { name: 'Bengali', sr: 'bn-IN', w: 'bn' },
+  gu: { name: 'Gujarati', sr: 'gu-IN', w: 'gu' },
+  auto: { name: 'Mixed or other (detect)', sr: 'en-IN', w: '' },
+};
+const COLORS = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6', '--s7', '--s8'];
+const ls = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (_) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} },
+};
+function fmt(sec) { sec = Math.max(0, Math.floor(sec || 0)); return [sec / 3600, sec / 60 % 60, sec % 60].map(n => String(Math.floor(n)).padStart(2, '0')).join(':'); }
+function mins(sec) { sec = Math.round(sec || 0); if (sec < 60) return sec + ' s'; const m = Math.round(sec / 60); return m < 60 ? m + ' min' : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`; }
+function slug(s) { return (s || 'meeting').trim().replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-').slice(0, 50) || 'meeting'; }
+function stamp(d) { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function el(tag, text, cls) { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; }
+function cap(s) { s = String(s || '').trim(); return s.charAt(0).toUpperCase() + s.slice(1); }
+function dateStr(ms) { return new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }); }
+function download(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+let toastT;
+function toast(text) { const t = $('toast'); t.textContent = text; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 4000); }
+function fillLangs(sel) { for (const [k, v] of Object.entries(LANGS)) sel.appendChild(new Option(v.name, k)); }
+fillLangs($('lang')); fillLangs($('mLang'));
+$('mNspk').append(new Option('Work it out automatically', '0'), ...[2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => new Option(n, n)));
+function lines(s) { return String(s || '').split('\n').map(x => x.trim()).filter(Boolean); }
+
+// ================= Storage (IndexedDB: meetings + audio) =================
+const DB = (() => {
+  let dbp = null, mem = null;
+  function open() {
+    if (!dbp) dbp = new Promise((res, rej) => {
+      if (!self.indexedDB) return rej(new Error('No IndexedDB'));
+      const r = indexedDB.open('meeting-recorder', 1);
+      r.onupgradeneeded = () => { r.result.createObjectStore('meetings', { keyPath: 'id' }); r.result.createObjectStore('audio'); };
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }).catch(() => { mem = { meetings: new Map(), audio: new Map() }; return null; });
+    return dbp;
+  }
+  async function run(store, mode, fn) {
+    const db = await open();
+    if (!db) {
+      const s = mem[store];
+      return fn({ get: k => ({ result: s.get(k) }), getAll: () => ({ result: [...s.values()] }), put: (v, k) => { s.set(k === undefined ? v.id : k, v); return {}; }, delete: k => { s.delete(k); return {}; } }).result;
+    }
+    return new Promise((res, rej) => {
+      const t = db.transaction(store, mode); const req = fn(t.objectStore(store));
+      t.oncomplete = () => res(req && req.result); t.onerror = t.onabort = () => rej(t.error || new Error('Storage error'));
+    });
+  }
+  return {
+    get: id => run('meetings', 'readonly', s => s.get(id)),
+    all: () => run('meetings', 'readonly', s => s.getAll()),
+    put: m => run('meetings', 'readwrite', s => s.put(m)),
+    del: async id => { await run('meetings', 'readwrite', s => s.delete(id)); await run('audio', 'readwrite', s => s.delete(id)); },
+    getAudio: id => run('audio', 'readonly', s => s.get(id)),
+    putAudio: (id, blob) => run('audio', 'readwrite', s => s.put(blob, id)),
+    inMemory: async () => { await open(); return !!mem; },
+  };
+})();
+const cache = new Map(), audioBlobs = new Map(), saveTimers = {};
+function save(m, now) {
+  clearTimeout(saveTimers[m.id]);
+  const go = () => DB.put(JSON.parse(JSON.stringify(m))).catch(e => toast('Could not save the meeting: ' + e.message));
+  if (now) return go();
+  saveTimers[m.id] = setTimeout(go, 500);
+}
+async function loadMeeting(id) { if (cache.has(id)) return cache.get(id); const m = await DB.get(id); if (m) cache.set(id, m); return m; }
+async function getAudio(id) { if (audioBlobs.has(id)) return audioBlobs.get(id); const b = await DB.getAudio(id); if (b) audioBlobs.set(id, b); return b; }
+function newId() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+// ================= Word list and corrections =================
+function vocab() { return lines(ls.get('mr-vocab', '')); }
+function repls() { return ls.get('mr-repl', []); }
+function lev(a, b) {
+  a = a.toLowerCase(); b = b.toLowerCase();
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+function letters(s) { return s.toLowerCase().replace(/[^a-z0-9]/g, ''); }
+// A rough "sounds like" key: similar-sounding spellings get the same key
+function phon(s) {
+  return letters(s).replace(/ph/g, 'f').replace(/ck|q/g, 'k').replace(/c(?=[eiy])/g, 's').replace(/c/g, 'k')
+    .replace(/x/g, 'ks').replace(/z/g, 's').replace(/w/g, 'v').replace(/([tsdbkgj])h/g, '$1')
+    .replace(/[aeiouy]+/g, 'a').replace(/(.)\1+/g, '$1');
+}
+const WORD_EDGE = '[^\\p{L}\\p{N}]';
+function applyRepls(text) {
+  for (const { from, to } of repls()) {
+    if (!from) continue;
+    text = text.replace(new RegExp(`(^|${WORD_EDGE})${escRe(from)}(?=$|${WORD_EDGE})`, 'giu'), (_, a) => a + to);
+  }
+  return text;
+}
+function fuzzyFix(text, terms) {
+  const T = terms.map(t => ({ t, low: letters(t), ph: phon(t) })).filter(x => x.low.length >= 3 && x.ph.length >= 3);
+  if (!T.length || !text) return text;
+  const words = text.split(/\s+/).filter(Boolean), out = [];
+  for (let i = 0; i < words.length;) {
+    let best = null;
+    for (let w = Math.min(3, words.length - i); w >= 1; w--) {
+      const seg = words.slice(i, i + w);
+      if (seg.slice(0, -1).some(x => /[.,!?;:]$/.test(x))) continue;
+      const joined = seg.join(' ');
+      const lead = joined.match(/^[^\p{L}\p{N}]*/u)[0], trail = joined.match(/(?:['’]s)?[^\p{L}\p{N}]*$/u)[0];
+      const core = joined.slice(lead.length, joined.length - trail.length);
+      if (!core || /[^\x20-\x7e]/.test(core)) continue;
+      const low = letters(core);
+      if (low.length < 3) continue;
+      const ph = phon(core);
+      for (const x of T) {
+        let score;
+        if (low === x.low) score = 0;
+        else {
+          if (ph[0] !== x.ph[0]) continue;
+          const long = x.ph.length >= 5, d = lev(ph, x.ph);
+          if (d > (long ? 1 : 0)) continue;
+          // Short names only replace words that look like names, so "pray" never becomes "Priya"
+          if (!long && !/^[A-Z]/.test(core)) continue;
+          const r = lev(low, x.low) / Math.max(low.length, x.low.length);
+          if (r > (!long ? 0.4 : d === 0 ? 0.6 : 0.5)) continue;
+          score = 1 + d + r;
+        }
+        if (!best || score < best.score || (score === best.score && w > best.w)) best = { score, w, rep: lead + x.t + trail };
+      }
+    }
+    if (best) { out.push(best.rep); i += best.w; } else { out.push(words[i]); i++; }
+  }
+  return out.join(' ');
+}
+function correct(text, extra) { return fuzzyFix(applyRepls(text || ''), [...new Set([...vocab(), ...(extra || [])])]); }
+
+// ================= Navigation =================
+let cur = null, tab = 'minutes';
+async function route() {
+  const [, a, b] = (location.hash.slice(1) || '/record').split('/');
+  if (a === 'm' && b) {
+    const m = await loadMeeting(b);
+    if (!m) { location.hash = '#/meetings'; return; }
+    showView('meeting'); openMeeting(m);
+  } else {
+    const v = ['record', 'meetings', 'words'].includes(a) ? a : 'record';
+    cur = null; showView(v);
+    if (v === 'meetings') renderList();
+    if (v === 'words') renderWords();
+  }
+}
+function showView(v) {
+  document.querySelectorAll('.view').forEach(s => s.hidden = s.id !== 'v-' + v);
+  document.querySelectorAll('nav a').forEach(a => { if (a.dataset.nav === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+
+// ================= Recorder =================
 const KBPS = 128;
 let micStream, dispStream, ctx, proc, encoder, mp3 = [], state = 'idle', vrec = null, vchunks = [], vdone = null;
 let samples = 0, rate = 48000, startedAt = 0, tick;
@@ -616,22 +975,39 @@ let peakMic = 0, peakSys = 0, youTalking = false, youSince = 0, quietBlocks = 0;
 const youSegments = [], tagLog = [], liveLines = [];
 let sr = null, srWanted = false, srTrack = null, interimEl = null;
 
-function show(text, kind) { const m = $('msg'); m.hidden = false; m.className = 'msg ' + (kind || ''); m.textContent = text; }
-function topStatus(text, live) { $('topStatus').textContent = text; $('topDot').classList.toggle('on', !!live); }
-function fmt(sec) { sec = Math.max(0, Math.floor(sec)); return [sec / 3600, sec / 60 % 60, sec % 60].map(n => String(Math.floor(n)).padStart(2, '0')).join(':'); }
-function slug(s) { return (s || 'meeting').trim().replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-').slice(0, 50) || 'meeting'; }
-function stamp(d) { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
-function people() { return $('people').value.split('\n').map(s => s.trim()).filter(Boolean); }
+function show(text, kind) { const m = $('msg'); m.hidden = !text; m.className = 'msg ' + (kind || ''); m.textContent = text || ''; }
+function people() { return lines($('people').value); }
 function nowSec() { return samples / rate; }
 function online() { return $('modeOnline').checked; }
+function curLang() { return $('lang').value; }
 
-// ---------- Step 2: recording ----------
+// Remember the setup between visits
+const PREFS = ['lang', 'nspk', 'quality', 'autoTx', 'saveCopy', 'liveOn', 'showOrig'];
+function loadPrefs() {
+  const p = ls.get('mr-prefs', {});
+  PREFS.forEach(k => { if (p[k] === undefined) return; const e = $(k); if (e.type === 'checkbox') e.checked = p[k]; else e.value = p[k]; });
+  if (p.mode === 'room') $('modeRoom').checked = true;
+  if (!$('lang').value) $('lang').value = 'en';
+}
+function savePrefs() { const p = { mode: online() ? 'online' : 'room' }; PREFS.forEach(k => { const e = $(k); p[k] = e.type === 'checkbox' ? e.checked : e.value; }); ls.set('mr-prefs', p); }
+PREFS.forEach(k => $(k).addEventListener('change', savePrefs));
+document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', () => { savePrefs(); syncSetup(); }));
+function syncSetup() {
+  $('videoOpt').hidden = !online(); if (!online()) $('withVideo').checked = false;
+  $('sysMeter').hidden = !online();
+  const l = curLang();
+  $('langHint').textContent = l === 'en' ? 'Captions, transcript and minutes in English.'
+    : l === 'auto' ? 'The transcript and minutes are written in English, whatever language is spoken.'
+    : `Live captions show ${LANGS[l].name.replace(' or Hinglish', '')} with an English translation. The transcript and minutes are written in English.`;
+}
+$('lang').addEventListener('change', () => { syncSetup(); if (state === 'recording') { prepTranslator(); if ($('liveOn').checked) { stopLive(); startLive(); } } });
+
 function renderTags() {
   const box = $('tags'); box.textContent = '';
   const names = people(); if (!names.length) names.push('Me', 'Someone else');
   names.slice(0, 9).forEach((n, i) => {
-    const b = document.createElement('button'); b.type = 'button'; b.dataset.name = n;
-    const k = document.createElement('kbd'); k.textContent = i + 1; b.append(k, n);
+    const b = el('button'); b.type = 'button'; b.dataset.name = n;
+    b.append(el('kbd', String(i + 1)), n);
     b.onclick = () => tag(n); box.appendChild(b);
   });
 }
@@ -640,28 +1016,28 @@ function tag(name) {
   tagLog.push({ t: nowSec(), name });
   document.querySelectorAll('#tags button').forEach(b => b.classList.toggle('cur', b.dataset.name === name));
 }
-$('people').addEventListener('input', renderTags); renderTags();
-window.addEventListener('pageshow', () => setTimeout(() => { renderTags(); syncVideoOpt(); }, 0));
+$('people').addEventListener('input', renderTags);
 document.addEventListener('keydown', e => {
-  if (e.target.matches('input, textarea, select, [contenteditable]')) return;
-  const n = parseInt(e.key, 10); const btn = $('tags').children[n - 1];
+  if ($('v-record').hidden || e.ctrlKey || e.metaKey || e.altKey || e.target.matches('input, textarea, select, [contenteditable]')) return;
+  const n = parseInt(e.key, 10), btn = $('tags').children[n - 1];
   if (n >= 1 && btn) tag(btn.dataset.name);
 });
 
 async function start() {
+  if (state !== 'idle') return;
   if (typeof lamejs === 'undefined') { show('The MP3 encoder did not load. Reload the page and try again.', 'err'); return; }
-  $('msg').hidden = true;
-  renderTags();
+  prepTranslator(); // must start inside the click so the browser allows it
+  show(''); renderTags();
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-  } catch (e) { show('The microphone was blocked. Allow it in the address bar (the camera/mic icon) and press Start again.', 'err'); return; }
+  } catch (e) { show('The microphone was blocked. Allow it from the icon in the address bar, then press Start again.', 'err'); return; }
   if (online()) {
     try {
       dispStream = await navigator.mediaDevices.getDisplayMedia({
         video: true, audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-        systemAudio: 'include', selfBrowserSurface: 'exclude'
+        systemAudio: 'include', selfBrowserSurface: 'exclude',
       });
-    } catch (e) { cleanup(); show('Sharing was cancelled. Press Start again and pick the screen or meeting tab. For a meeting in a room, choose "In a room".', 'err'); return; }
+    } catch (e) { cleanup(); show('Sharing was cancelled. Press Start again and pick the screen or the meeting tab. For a meeting in a room, choose "In a room".', 'err'); return; }
     if (!dispStream.getAudioTracks().length) {
       cleanup(); show('No call audio was shared. Press Start again and turn on "Also share system audio" (Windows) or "Also share tab audio" (meeting tab).', 'err'); return;
     }
@@ -700,11 +1076,18 @@ async function start() {
   liveLines.length = 0; $('live').textContent = ''; interimEl = null;
   startLive();
   tick = setInterval(ui, 200);
-  $('sysMeter').hidden = !dispStream;
-  $('dot').classList.add('on'); topStatus('Recording', true);
-  $('start').disabled = true; $('pause').disabled = false; $('stop').disabled = false;
-  document.querySelectorAll('input[name=mode], #withVideo').forEach(r => r.disabled = true);
+  setRecUI();
   show(dispStream ? 'Recording. Check that both bars move when people talk.' : 'Recording the room.', 'good');
+}
+
+function setRecUI() {
+  const on = state !== 'idle';
+  $('start').hidden = on; $('pause').hidden = !on; $('stop').hidden = !on;
+  $('pause').textContent = state === 'paused' ? 'Resume' : 'Pause';
+  $('dot').classList.toggle('on', state === 'recording');
+  $('recState').textContent = state === 'recording' ? 'Recording' : state === 'paused' ? 'Paused' : 'Ready';
+  document.querySelectorAll('input[name=mode], #withVideo').forEach(r => r.disabled = on);
+  updatePill();
 }
 
 function onAudio(e) {
@@ -733,15 +1116,9 @@ function ui() {
 
 function togglePause() {
   if (vrec) { if (state === 'recording') vrec.pause(); else if (state === 'paused') vrec.resume(); }
-  if (state === 'recording') { stopLive(); state = 'paused'; $('pause').textContent = 'Resume'; $('dot').classList.remove('on'); topStatus('Paused'); show('Paused. Nothing is being recorded.'); }
-  else if (state === 'paused') { state = 'recording'; startLive(); $('pause').textContent = 'Pause'; $('dot').classList.add('on'); topStatus('Recording', true); show('Recording.', 'good'); }
-}
-
-function download(blob, name) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  if (state === 'recording') { stopLive(); state = 'paused'; show('Paused. Nothing is being recorded.', 'warn'); }
+  else if (state === 'paused') { state = 'recording'; startLive(); show('Recording.', 'good'); }
+  setRecUI();
 }
 
 async function stop() {
@@ -749,27 +1126,33 @@ async function stop() {
   state = 'idle';
   if (youTalking) youSegments.push([youSince, nowSec()]);
   const end = encoder.flush(); if (end.length) mp3.push(new Uint8Array(end));
-  const base = `${slug($('title').value)}_${stamp(new Date(startedAt))}`;
+  const title = $('title').value.trim() || `Meeting ${new Date(startedAt).toLocaleDateString()}`;
+  const base = `${slug(title)}_${stamp(new Date(startedAt))}`;
   const mp3Blob = new Blob(mp3, { type: 'audio/mpeg' });
-  download(mp3Blob, `${base}.mp3`);
-  let videoName = '';
   if (vrec) {
     if (vrec.state !== 'inactive') vrec.stop();
     await vdone;
     const vt = vrec.mimeType || 'video/webm';
-    videoName = `${base}_video.${vt.includes('mp4') ? 'mp4' : 'webm'}`;
-    download(new Blob(vchunks, { type: vt }), videoName);
+    download(new Blob(vchunks, { type: vt }), `${base}_video.${vt.includes('mp4') ? 'mp4' : 'webm'}`);
     vrec = null; vchunks = [];
   }
-  if (liveLines.length) download(new Blob(['Live captions (rough draft)\n\n' + liveLines.map(l => `[${fmt(l.t)}] ${l.who}: ${l.text}`).join('\n')], { type: 'text/plain' }), `${base}_live-captions.txt`);
   const len = nowSec();
-  cleanup();
-  $('dot').classList.remove('on'); topStatus('Ready');
-  $('start').disabled = false; $('pause').disabled = true; $('stop').disabled = true; $('pause').textContent = 'Pause';
-  document.querySelectorAll('input[name=mode], #withVideo').forEach(r => r.disabled = false); syncVideoOpt();
-  show(`Saved ${base}.mp3${videoName ? ' and ' + videoName : ''} to your Downloads.`, 'good');
-  setSource(mp3Blob, `${base}.mp3`, new Date(startedAt), len);
-  if ($('autoTx').checked) runTranscript();
+  cleanup(); setRecUI(); $('timer').textContent = fmt(0);
+  const m = {
+    id: newId(), title, created: startedAt, duration: len, source: online() ? 'Online call' : 'In a room',
+    lang: curLang(), nspk: +$('nspk').value, quality: $('quality').value, attendees: people(), audioName: base + '.mp3',
+    live: liveLines.map(l => ({ ...l })), rows: [], speakers: [], mom: null, status: 'recorded',
+  };
+  cache.set(m.id, m); audioBlobs.set(m.id, mp3Blob);
+  let stored = true;
+  try { await DB.putAudio(m.id, mp3Blob); await save(m, true); if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); }
+  catch (e) { stored = false; }
+  if ($('saveCopy').checked || !stored) download(mp3Blob, base + '.mp3');
+  show(stored ? '' : 'This browser could not keep the meeting, so the MP3 was saved to your Downloads.', stored ? '' : 'warn');
+  $('title').value = ''; liveLines.length = 0;
+  $('live').innerHTML = '<p class="ph">Captions appear here while you record. Other languages are translated to English as people speak.</p>';
+  location.hash = '#/m/' + m.id;
+  if ($('autoTx').checked) process(m);
 }
 
 function cleanup() {
@@ -782,131 +1165,167 @@ function cleanup() {
   peakMic = peakSys = 0; $('mMic').style.width = $('mSys').style.width = '0';
 }
 
-// Live captions with the browser's own speech service
+// ---- Live captions (browser speech service) with English translation ----
+let translator = null, translatorP = null, trFailNoted = false;
+function prepTranslator() {
+  translator = null; translatorP = null;
+  const src = curLang();
+  if (src === 'en' || src === 'auto' || !$('liveOn').checked) return;
+  if ('Translator' in self) {
+    try {
+      translatorP = Translator.create({ sourceLanguage: src, targetLanguage: 'en' }).then(t => { translator = t; }).catch(() => {});
+    } catch (_) { translatorP = null; }
+  }
+}
+async function toEnglish(text, src) {
+  if (translatorP) await Promise.race([translatorP, new Promise(r => setTimeout(r, 4000))]);
+  if (translator) { try { return await translator.translate(text); } catch (_) {} }
+  // Fallback for browsers without the built-in translator (the captions already use Google's speech service)
+  try {
+    const r = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src}&tl=en&dt=t&q=${encodeURIComponent(text)}`);
+    const j = await r.json();
+    return j[0].map(x => x[0]).join('');
+  } catch (_) { return ''; }
+}
 function speakerNow() {
-  const names = people();
   if (tagLog.length) return tagLog[tagLog.length - 1].name;
-  if (dispStream) return youTalking ? (names[0] || 'You') : 'Others';
+  if (dispStream) return youTalking ? (people()[0] || 'You') : 'Others';
   return 'Speaker';
 }
-function addLine(text) {
-  const t = nowSec(), who = speakerNow();
-  liveLines.push({ t, who, text });
-  const ln = document.createElement('div'); ln.className = 'ln';
-  const ts = document.createElement('span'); ts.className = 'ts'; ts.textContent = fmt(t);
-  const body = document.createElement('div');
-  const w = document.createElement('span'); w.className = 'who'; w.textContent = who + ':';
-  body.append(w, document.createTextNode(text)); ln.append(ts, body);
-  const box = $('live'); box.insertBefore(ln, interimEl); box.scrollTop = box.scrollHeight;
+function lineEl(l, showOrig) {
+  const ln = el('div', null, 'ln');
+  const body = el('div');
+  body.append(el('span', l.who + ':', 'who'), document.createTextNode(l.en || l.text));
+  if (l.en && l.en !== l.text && showOrig) body.appendChild(el('span', l.text, 'orig'));
+  if (l.pending) body.appendChild(el('span', 'Translating…', 'orig'));
+  ln.append(el('span', fmt(l.t), 'ts'), body);
+  return ln;
+}
+function addLine(text, src) {
+  const extra = people();
+  const l = { t: nowSec(), who: speakerNow(), text: src === 'en' || src === 'auto' ? correct(text, extra) : text };
+  liveLines.push(l);
+  const box = $('live'), ph = box.querySelector('.ph'); if (ph) ph.remove();
+  let node = lineEl(l, $('showOrig').checked); box.insertBefore(node, interimEl); box.scrollTop = box.scrollHeight;
+  if (src !== 'en' && src !== 'auto') {
+    l.pending = true; const n2 = lineEl(l, true); node.replaceWith(n2); node = n2;
+    toEnglish(text, src).then(en => {
+      delete l.pending;
+      if (en) l.en = correct(en, extra);
+      else if (!trFailNoted) { trFailNoted = true; $('liveNote').textContent = 'Live translation is not available in this browser right now, so captions show the original language. The final transcript will still be in English. Chrome 138 or newer translates on your computer.'; }
+      const n3 = lineEl(l, $('showOrig').checked); node.replaceWith(n3); box.scrollTop = box.scrollHeight;
+    });
+  }
 }
 function setInterim(text) {
   const box = $('live');
   if (!text) { if (interimEl) interimEl.remove(); interimEl = null; return; }
-  if (!interimEl) { interimEl = document.createElement('div'); interimEl.className = 'interim'; box.appendChild(interimEl); }
-  interimEl.textContent = text + '…'; box.scrollTop = box.scrollHeight;
+  if (!interimEl) { interimEl = el('div', null, 'ln interim'); box.appendChild(interimEl); }
+  interimEl.textContent = ''; interimEl.append(el('span', fmt(nowSec()), 'ts'), el('div', text + '…'));
+  box.scrollTop = box.scrollHeight;
 }
 function startLive() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!$('liveOn').checked) return;
   if (!SR) { $('liveNote').textContent = 'Live captions need Google Chrome or Microsoft Edge. Recording and the full transcript still work.'; return; }
   srWanted = true;
-  sr = new SR(); sr.lang = $('lang').value; sr.continuous = true; sr.interimResults = true;
+  const lang = curLang();
+  sr = new SR(); sr.lang = LANGS[lang].sr; sr.continuous = true; sr.interimResults = true;
+  const inst = sr;
   sr.onresult = e => {
+    if (inst !== sr || state !== 'recording') return;
     let interim = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const r = e.results[i], txt = r[0].transcript.trim();
-      if (r.isFinal) { if (txt) addLine(txt); } else interim += txt + ' ';
+      if (r.isFinal) { if (txt) addLine(txt, lang); } else interim += txt + ' ';
     }
     setInterim(interim.trim());
   };
   sr.onerror = e => {
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { srWanted = false; $('liveNote').textContent = 'The browser blocked live captions. Recording and the full transcript still work.'; }
     else if (e.error === 'network') $('liveNote').textContent = 'Live captions need an internet connection. Recording and the full transcript still work.';
+    else if (e.error === 'language-not-supported') { srWanted = false; $('liveNote').textContent = 'This browser has no live captions for that language. Recording and the English transcript still work.'; }
   };
-  const inst = sr;
   sr.onend = () => { if (inst !== sr) return; setInterim(''); if (srWanted && state === 'recording') setTimeout(() => { if (inst !== sr) return; try { srTrack ? inst.start(srTrack) : inst.start(); } catch (_) { try { inst.start(); } catch (__) {} } }, 250); };
   try { srTrack ? sr.start(srTrack) : sr.start(); }
   catch (_) { try { sr.start(); } catch (__) {} }
 }
-function stopLive() { srWanted = false; if (sr) { try { sr.stop(); } catch (_) {} sr = null; } setInterim(''); }
-$('liveOn').addEventListener('change', () => { if (state !== 'recording') return; $('liveOn').checked ? startLive() : stopLive(); });
-$('lang').addEventListener('change', () => { if (state === 'recording' && $('liveOn').checked) { stopLive(); startLive(); } });
-
-function syncVideoOpt() { $('videoOpt').hidden = !online(); if (!online()) $('withVideo').checked = false; }
-document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', syncVideoOpt));
+function stopLive() { srWanted = false; if (sr) { const s = sr; sr = null; try { s.stop(); } catch (_) {} } setInterim(''); }
+$('liveOn').addEventListener('change', () => { if (state !== 'recording') return; if ($('liveOn').checked) { prepTranslator(); startLive(); } else stopLive(); });
+$('showOrig').addEventListener('change', () => {
+  if (!liveLines.length) return;
+  const box = $('live'); box.textContent = ''; liveLines.forEach(l => box.appendChild(lineEl(l, $('showOrig').checked))); interimEl = null; box.scrollTop = box.scrollHeight;
+});
 $('start').onclick = start;
 $('pause').onclick = togglePause;
 $('stop').onclick = stop;
-window.addEventListener('beforeunload', e => { if (state !== 'idle' || busy) { e.preventDefault(); e.returnValue = ''; } });
-if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) show('This browser can\'t record meetings. Open this page in Google Chrome or Microsoft Edge on a computer.', 'err');
 
-// ---------- Step 3: transcript, speakers and minutes ----------
-const P = n => Array.from({ length: n.length }, (_, i) => n.name + '.part' + i);
-const MODELS = {
-  segmentation: ['speaker-segmentation.onnx'],
-  embedding: P({ name: 'speaker-embedding.onnx', length: 2 }),
-  encoder: P({ name: 'whisper-base-encoder.onnx', length: 2 }),
-  decoder: P({ name: 'whisper-base-decoder.onnx', length: 7 }),
-  tokens: ['whisper-base-tokens.txt'],
-};
-const MODEL_BYTES = 188635059;
-const CACHE = 'meeting-recorder-models-v2';
-const COLORS = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6', '--s7', '--s8'];
-let source = null, rows = [], speakers = [], busy = false, audioUrl = null, meetingDate = null, meetingLen = 0;
-
-function setSource(blob, name, date, len) {
-  source = { blob, name }; meetingDate = date || new Date(); meetingLen = len || 0;
-  $('srcInfo').textContent = `${name}${len ? ' · ' + fmt(len) : ''}`;
-  if (audioUrl) URL.revokeObjectURL(audioUrl);
-  audioUrl = URL.createObjectURL(blob); $('player').src = audioUrl;
-}
-$('fileIn').addEventListener('change', () => {
-  const f = $('fileIn').files[0]; if (!f) return;
-  setSource(f, f.name, new Date(f.lastModified || Date.now()), 0);
-  $('fileIn').value = '';
-  runTranscript();
+// ---- Import a recording ----
+$('fileIn').addEventListener('change', async () => {
+  const f = $('fileIn').files[0]; $('fileIn').value = ''; if (!f) return;
+  const m = {
+    id: newId(), title: cap(f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')), created: f.lastModified || Date.now(), duration: 0,
+    source: 'Imported file', lang: curLang(), nspk: +$('nspk').value, quality: $('quality').value, attendees: people(), audioName: f.name,
+    live: [], rows: [], speakers: [], mom: null, status: 'recorded',
+  };
+  cache.set(m.id, m); audioBlobs.set(m.id, f);
+  try { await DB.putAudio(m.id, f); await save(m, true); } catch (e) { toast('This browser could not keep the file; it will be lost when you close the tab.'); }
+  location.hash = '#/m/' + m.id;
 });
 
-function stage(k, cls) { document.querySelectorAll('#stages li').forEach(li => { if (li.dataset.k === k) { li.classList.remove('active', 'done'); if (cls) li.classList.add(cls); } }); }
-function progress(frac, text, eta) { $('pbar').style.width = Math.round(Math.min(1, frac) * 100) + '%'; $('ptext').textContent = text || ''; $('peta').textContent = eta || ''; }
-function txError(text) { const e = $('txErr'); e.hidden = false; e.textContent = text; }
+// ================= Transcript engine =================
+const P = (name, n) => Array.from({ length: n }, (_, i) => name + '.part' + i);
+const MODELS = {
+  segmentation: ['speaker-segmentation.onnx'],
+  embedding: P('speaker-embedding.onnx', 2),
+  tokens: ['whisper-base-tokens.txt'],
+  standard: { encoder: P('whisper-base-encoder.onnx', 2), decoder: P('whisper-base-decoder.onnx', 7) },
+  high: { encoder: P('whisper-small-encoder.onnx', 6), decoder: P('whisper-small-decoder.onnx', 14) },
+};
+const MODEL_BYTES = { speakers: 28842499, standard: 159792560, high: 374668597 };
+// "auto" means the larger model for languages other than English, where it is much better
+function quality(m) { return m.quality === 'standard' || m.quality === 'high' ? m.quality : (m.lang === 'en' ? 'standard' : 'high'); }
+// Whisper sometimes leaves Hindi day and month names untranslated
+const DAY_FIX = { som: 'Monday', mangal: 'Tuesday', budh: 'Wednesday', guru: 'Thursday', brihaspati: 'Thursday', shukra: 'Friday', sukra: 'Friday', shani: 'Saturday', sani: 'Saturday', ravi: 'Sunday', robi: 'Sunday', it: 'Sunday', aitha: 'Sunday' };
+function fixDays(t) { return t.replace(/\b([A-Za-z]+?)(?:vaar|waar|baar|var|war|bar|vaaram|varam)\b/g, (w, root) => DAY_FIX[root.toLowerCase()] || w); }
+const CACHE = 'meeting-recorder-models-v2';
+let job = null;
 
 async function decode16k(blob) {
   const ac = new OfflineAudioContext(1, 16000, 16000);
-  const ab = await ac.decodeAudioData(await blob.arrayBuffer());
+  let ab;
+  try { ab = await ac.decodeAudioData(await blob.arrayBuffer()); }
+  catch (_) { throw new Error('This file could not be read as audio. Try an MP3, M4A, WAV or MP4 file.'); }
   const n = ab.length, out = new Float32Array(n);
   for (let c = 0; c < ab.numberOfChannels; c++) { const d = ab.getChannelData(c); for (let i = 0; i < n; i++) out[i] += d[i] / ab.numberOfChannels; }
   return out;
 }
-
-async function ensureModels() {
+async function ensureModels(q) {
   if (!self.caches) throw new Error('Open this page from its web address (your GitHub Pages link), not as a file on your computer.');
-  const cache = await caches.open(CACHE);
-  const urls = Object.values(MODELS).flat();
-  let have = 0;
-  const todo = [];
-  for (const u of urls) { const r = await cache.match(u); if (r) have += +(r.headers.get('content-length') || 0) || (await r.clone().blob()).size; else todo.push(u); }
+  const c = await caches.open(CACHE);
+  const urls = [...MODELS.segmentation, ...MODELS.embedding, ...MODELS.tokens, ...MODELS[q].encoder, ...MODELS[q].decoder];
+  const totalBytes = MODEL_BYTES.speakers + MODEL_BYTES[q];
+  let have = 0; const todo = [];
+  for (const u of urls) { const r = await c.match(u); if (r) have += +(r.headers.get('content-length') || 0) || (await r.clone().blob()).size; else todo.push(u); }
   if (!todo.length) { progress(1, 'Speech models ready'); return; }
   let got = have;
   for (const u of todo) {
-    const res = await fetch(u);
-    if (!res.ok) throw new Error(`Could not download ${u} (error ${res.status}). Make sure every file from the zip is in your GitHub repo.`);
+    let res;
+    try { res = await fetch(u); } catch (_) { throw new Error('Could not download the speech models. Check your internet connection and try again.'); }
+    if (!res.ok) throw new Error(`Could not download ${u} (error ${res.status}). Make sure every file is in your GitHub repo.`);
     const reader = res.body.getReader(); const parts = [];
-    for (;;) { const { done, value } = await reader.read(); if (done) break; parts.push(value); got += value.length; progress(got / MODEL_BYTES, `Downloading speech models: ${Math.round(got / 1e6)} of ${Math.round(MODEL_BYTES / 1e6)} MB`); }
+    for (;;) { const { done, value } = await reader.read(); if (done) break; parts.push(value); got += value.length; progress(got / totalBytes, `Downloading speech models (first time only): ${Math.round(got / 1e6)} of ${Math.round(totalBytes / 1e6)} MB`); }
     const blob = new Blob(parts);
-    await cache.put(u, new Response(blob, { headers: { 'content-length': String(blob.size) } }));
+    await c.put(u, new Response(blob, { headers: { 'content-length': String(blob.size) } }));
   }
 }
-
-function startWorker() { return new Worker('engine-worker.js'); }
 function call(worker, msg, transfer) {
   return new Promise((resolve, reject) => {
     worker.onmessage = ({ data }) => data.type === 'error' ? reject(new Error(data.message)) : resolve(data);
-    worker.onerror = e => reject(new Error(e.message || 'The speech engine stopped unexpectedly.'));
+    worker.onerror = e => reject(new Error(e.message || 'The speech engine stopped unexpectedly. Close other tabs and try again.'));
     worker.postMessage(msg, transfer || []);
   });
 }
-
 // Join pieces from the same speaker; split long turns at quiet moments (Whisper reads up to 30 s at a time)
 function makeTurns(segs, audio) {
   const turns = [];
@@ -932,273 +1351,605 @@ function makeTurns(segs, audio) {
   }
   return out;
 }
-
-function workerCount() {
+function workerCount(q) {
   const cores = navigator.hardwareConcurrency || 4, mem = navigator.deviceMemory || 8;
   let n = Math.max(1, Math.min(3, Math.floor(cores / 2)));
   if (mem <= 4) n = 1; else if (mem <= 6) n = Math.min(n, 2);
+  if (q === 'high') n = Math.min(n, mem >= 8 ? 2 : 1); // each engine needs about 1 GB of memory
   return n;
 }
+function stage(k, cls) { if (job) { job.stages[k] = cls; renderJob(); } }
+function progress(frac, text, eta) { if (job) { job.frac = frac; job.text = text || ''; job.eta = eta || ''; renderJob(); } }
+function renderJob() {
+  updatePill();
+  if (!cur || !job || job.id !== cur.id) return;
+  document.querySelectorAll('#stages li').forEach(li => { li.className = job.stages[li.dataset.k] || ''; });
+  $('pbar').style.width = Math.round(Math.min(1, job.frac) * 100) + '%';
+  $('ptext').textContent = job.text; $('peta').textContent = job.eta;
+}
 
-async function runTranscript() {
-  if (busy || !source) return;
-  busy = true; $('txErr').hidden = true; $('results').hidden = true; $('prog').hidden = false;
-  document.querySelectorAll('#stages li').forEach(li => li.classList.remove('active', 'done'));
-  topStatus('Making the transcript', true);
+async function process(m) {
+  if (job) { toast('Another meeting is being transcribed. Start this one when it finishes.'); return; }
+  const blob = await getAudio(m.id);
+  if (!blob) { m.status = 'error'; m.error = 'The audio for this meeting is missing.'; save(m); if (cur === m) renderMeeting(); return; }
+  job = { id: m.id, stages: {}, frac: 0, text: '', eta: '' };
+  Object.assign(m, { status: 'processing', error: '', rows: [], speakers: [], mom: null });
+  if (cur === m) { tab = 'tx'; renderMeeting(); }
   const workers = [];
   try {
     stage('audio', 'active'); progress(0, 'Reading the recording');
-    const audio = await decode16k(source.blob);
+    const audio = await decode16k(blob);
     const dur = audio.length / 16000;
-    if (!meetingLen) { meetingLen = dur; $('srcInfo').textContent = `${source.name} · ${fmt(dur)}`; }
+    if (!m.duration) m.duration = dur;
     if (dur < 1) throw new Error('The recording is too short to transcribe.');
     stage('audio', 'done');
 
-    stage('models', 'active'); await ensureModels(); stage('models', 'done');
+    const q = quality(m);
+    stage('models', 'active'); await ensureModels(q); stage('models', 'done');
 
-    stage('speakers', 'active'); progress(0.05, 'Listening for different voices. Long meetings take a few minutes.', '');
-    const dw = startWorker(); workers.push(dw);
-    await call(dw, { type: 'init-diarizer', models: MODELS, numSpeakers: +$('nspk').value });
+    stage('speakers', 'active'); progress(0.02, 'Listening for different voices');
+    const dw = new Worker('engine-worker.js'); workers.push(dw);
+    await call(dw, { type: 'init-diarizer', models: MODELS, numSpeakers: m.nspk || 0 });
     const t0 = performance.now();
-    const fakeTick = setInterval(() => { const el = (performance.now() - t0) / 1000; progress(Math.min(0.95, el / (dur * 0.25 + 5)), 'Listening for different voices', `${fmt(el)} elapsed`); }, 500);
+    const fake = setInterval(() => { const e = (performance.now() - t0) / 1000; progress(Math.min(0.95, e / (dur * 0.25 + 5)), 'Listening for different voices', `${fmt(e)} elapsed`); }, 500);
     let segs;
-    try { segs = (await call(dw, { type: 'diarize', samples: audio.slice() })).segments; } finally { clearInterval(fakeTick); }
+    try { segs = (await call(dw, { type: 'diarize', samples: audio.slice() })).segments; } finally { clearInterval(fake); }
     dw.terminate();
     if (!segs.length) throw new Error('No speech was found in this recording.');
-    // Number speakers in the order they first speak
     const order = []; segs.forEach(s => { if (!order.includes(s.speaker)) order.push(s.speaker); });
-    const turns = makeTurns(segs, audio).map((t, i) => ({ id: i, start: t.start, end: t.end, spk: order.indexOf(t.spk), text: '', done: false }));
-    rows = turns;
-    const names = people();
-    speakers = order.map((_, i) => ({ name: `Speaker ${i + 1}`, color: COLORS[i % COLORS.length] }));
+    m.rows = makeTurns(segs, audio).map((t, i) => ({ id: i, start: +t.start.toFixed(2), end: +t.end.toFixed(2), spk: order.indexOf(t.spk), text: '', done: false }));
+    m.speakers = order.map((_, i) => ({ name: `Speaker ${i + 1}`, color: COLORS[i % COLORS.length] }));
     stage('speakers', 'done');
 
-    stage('text', 'active'); $('results').hidden = false; renderSpeakers(); renderRows();
-    const n = workerCount();
+    stage('text', 'active');
+    if (cur === m) renderMeeting();
+    const n = workerCount(q);
     progress(0, `Starting ${n} transcription engine${n > 1 ? 's' : ''}`);
-    for (let i = 0; i < n; i++) { const w = startWorker(); workers.push(w); }
-    const asr = workers.slice(1);
-    await Promise.all(asr.map(w => call(w, { type: 'init-recognizer', models: MODELS, language: $('txLang').value })));
-    const totalSec = rows.reduce((s, r) => s + (r.end - r.start), 0);
+    const asr = [];
+    for (let i = 0; i < n; i++) { const w = new Worker('engine-worker.js'); workers.push(w); asr.push(w); }
+    const L = LANGS[m.lang] || LANGS.en;
+    const task = m.lang === 'en' ? 'transcribe' : 'translate';
+    await Promise.all(asr.map(w => call(w, { type: 'init-recognizer', models: { encoder: MODELS[q].encoder, decoder: MODELS[q].decoder, tokens: MODELS.tokens }, language: L.w, task })));
+    const totalSec = m.rows.reduce((s, r) => s + (r.end - r.start), 0);
     let doneSec = 0, next = 0; const t1 = performance.now();
+    const extra = m.attendees || [];
     await Promise.all(asr.map(async w => {
-      while (next < rows.length) {
-        const r = rows[next++];
+      while (next < m.rows.length) {
+        const r = m.rows[next++];
         const res = await call(w, { type: 'transcribe', id: r.id, samples: audio.slice(Math.floor(r.start * 16000), Math.ceil(r.end * 16000)) });
-        r.text = cleanText(res.text); r.done = true; updateRow(r);
+        r.text = correct(fixDays(cleanText(res.text)), extra); r.done = true;
+        if (cur === m) updateRow(r);
         doneSec += r.end - r.start;
-        const el = (performance.now() - t1) / 1000, left = el / doneSec * (totalSec - doneSec);
-        progress(doneSec / totalSec, `Writing the transcript: ${rows.filter(x => x.done).length} of ${rows.length} parts`, doneSec < totalSec ? `about ${fmt(left)} left` : '');
+        const e = (performance.now() - t1) / 1000, left = e / doneSec * (totalSec - doneSec);
+        progress(doneSec / totalSec, `Writing the transcript: ${m.rows.filter(x => x.done).length} of ${m.rows.length} parts`, doneSec < totalSec ? `about ${mins(left)} left` : '');
       }
     }));
-    rows = rows.filter(r => r.text);
+    m.rows = m.rows.filter(r => r.text);
+    m.rows.forEach(r => delete r.done);
     // Drop speakers left with no words and renumber the rest
-    const used = speakers.map((_, i) => rows.some(r => r.spk === i));
+    const used = m.speakers.map((_, i) => m.rows.some(r => r.spk === i));
     const remap = []; let k = 0; used.forEach((u, i) => { if (u) remap[i] = k++; });
-    speakers = speakers.filter((_, i) => used[i]).map((s, i) => ({ name: `Speaker ${i + 1}`, color: COLORS[i % COLORS.length] }));
-    rows.forEach(r => r.spk = remap[r.spk]);
-    fixNames(names);
-    autoName(names);
-    stage('text', 'done'); progress(1, `Done: ${speakers.length} speaker${speakers.length > 1 ? 's' : ''}, ${rows.length} lines`, '');
-    renderSpeakers(); renderRows(); renderMom();
-    topStatus('Transcript ready');
+    m.speakers = m.speakers.filter((_, i) => used[i]).map((s, i) => ({ name: `Speaker ${i + 1}`, color: COLORS[i % COLORS.length] }));
+    m.rows.forEach(r => r.spk = remap[r.spk]);
+    autoName(m);
+    m.mom = buildMom(m);
+    m.status = 'ready';
+    stage('text', 'done'); progress(1, 'Done');
+    tab = 'minutes';
+    toast(`Transcript ready: ${m.speakers.length} speaker${m.speakers.length === 1 ? '' : 's'}, ${m.rows.length} lines.`);
   } catch (e) {
     console.error(e);
-    txError(e.message || String(e)); topStatus('Something went wrong');
+    m.status = 'error'; m.error = e.message || String(e);
+    m.rows = (m.rows || []).filter(r => r.text);
   } finally {
     workers.forEach(w => w.terminate());
-    busy = false;
+    job = null; updatePill();
+    save(m, true);
+    if (cur === m) renderMeeting();
   }
 }
 
 // Whisper sometimes "hears" captions in silence; drop those
 function cleanText(t) {
   t = (t || '').replace(/\s+/g, ' ').trim();
-  if (/^[\[(].*[\])]$/.test(t)) return '';
-  if (/^(thank you\.?|thanks for watching[.!]?|you|\.+)$/i.test(t)) return '';
-  return t.charAt(0).toUpperCase() + t.slice(1);
+  if (/^[\[(♪*].*[\])♪*]$/.test(t)) return '';
+  if (/^(thank you\.?|thanks for watching[.!]?|you|\.+|subtitles by.*|please subscribe.*)$/i.test(t)) return '';
+  return cap(t);
 }
-
 // Rename speakers who introduce themselves ("this is Priya", "I'm Arjun")
-const NOT_NAMES = new Set('going here fine sure not just also very the a an glad happy good back sorry ready done there in on at from with okay ok so and calling speaking joining working talking'.split(' '));
-function lev(a, b) { a = a.toLowerCase(); b = b.toLowerCase(); const d = Array.from({ length: a.length + 1 }, (_, i) => [i]); for (let j = 1; j <= b.length; j++) d[0][j] = j; for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1)); return d[a.length][b.length]; }
-function autoName(attendees) {
-  const used = new Set();
-  speakers.forEach((s, i) => {
-    const mine = rows.filter(r => r.spk === i).slice(0, 4);
-    for (const r of mine) {
-      const m = r.text.match(/\b(?:this is|i am|i'm|my name is|myself)\s+([A-Z][a-zA-Z]+)/i);
-      if (!m) continue;
-      let name = m[1];
+const NOT_NAMES = new Set('going here fine sure not just also very the a an glad happy good back sorry ready done there in on at from with okay ok so and calling speaking joining working talking new sharing looking trying'.split(' '));
+const INTRO_RE = /\b(?:this is|i am|i'm|my name is|myself)\s+([A-Z][a-zA-Z]+)/i;
+function autoName(m) {
+  const att = m.attendees || [], taken = new Set();
+  m.speakers.forEach((s, i) => {
+    for (const r of m.rows.filter(r => r.spk === i).slice(0, 4)) {
+      const mm = r.text.match(INTRO_RE);
+      if (!mm) continue;
+      let name = mm[1];
       if (NOT_NAMES.has(name.toLowerCase())) continue;
-      if (attendees.length) {
-        const best = attendees.map(a => ({ a, d: lev(a.split(' ')[0], name) })).sort((x, y) => x.d - y.d)[0];
+      if (att.length) {
+        const best = att.map(a => ({ a, d: lev(a.split(' ')[0], name) })).sort((x, y) => x.d - y.d)[0];
         if (best.d > Math.max(1, Math.floor(name.length / 3))) continue;
         name = best.a;
       } else if (name[0] !== name[0].toUpperCase()) continue;
-      if (used.has(name)) continue;
-      used.add(name); s.name = name; s.auto = true; break;
+      if (taken.has(name)) continue;
+      taken.add(name); s.name = name; s.auto = true; break;
     }
   });
 }
+function talkTime(m, i) { return m.rows.filter(r => r.spk === i).reduce((t, r) => t + r.end - r.start, 0); }
 
-// Correct near-miss spellings of attendee names ("Arjan" -> "Arjun")
-function fixNames(attendees) {
-  const first = [...new Set(attendees.map(a => a.split(/\s+/)[0]).filter(a => a.length >= 3))];
-  if (!first.length) return;
-  rows.forEach(r => {
-    r.text = r.text.replace(/\b[A-Za-z][a-z]{2,}\b/g, w => {
-      if (first.some(a => a.toLowerCase() === w.toLowerCase())) return first.find(a => a.toLowerCase() === w.toLowerCase());
-      if (w[0] !== w[0].toUpperCase()) return w;
-      const best = first.map(a => ({ a, d: lev(a, w) })).sort((x, y) => x.d - y.d)[0];
-      return best.d === 1 && w.length >= 4 ? best.a : w;
+// ================= Minutes =================
+const STOP = new Set(`namaste namaskar ji haan accha theek a about above after again all also am an and any are as at be because been before being below between both but by can could did do does doing done down during each few for from further had has have having he her here hers him his how i if in into is it its itself just let lets like me more most my no nor not now of off on once only or other our ours out over own really right same she should so some such than that thats the their them then there these they this those through to too under until up us very was we well were what when where which while who whom why will with would yeah yes you your yours okay ok um uh going go get got know think thing things want say said one two lot good great thank thanks hello hi everyone today meeting let we'll i'll i'm it's that's there's we're you're they're don't can't won't isn't need make sure also yeah alright actually maybe something everything anything time next last first new look see way come take give put kind sort bit`.split(/\s+/));
+const DAY = '(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)';
+const DUE_RE = new RegExp(`\\b(?:by|before|on|until|till|due)\\s+((?:next |this |the )?(?:${DAY}|week|month|tomorrow|today|tonight|eod|end of (?:the )?(?:day|week|month)|\\d{1,2}(?:st|nd|rd|th)?(?: of)? [a-z]+|[a-z]+ \\d{1,2}(?:st|nd|rd|th)?))|\\b(tomorrow|next week|next month|this week|end of (?:the )?(?:day|week|month)|eod)\\b`, 'i');
+const DECISION_RE = /\b(decided|decision|agreed|agree on|we(?:'ll| will) go with|let'?s go with|finali[sz]ed?|approved|confirmed|settled on)\b/i;
+const ACTION_RE = /\b(will|'ll|need(?:s)? to|have to|has to|must|going to|action item|follow up|take care of)\b/i;
+const TOPIC_RE = /\b(status|update|issue|problem|risk|plan|progress|done|finished|completed|blocked|delay|launch|deadline|budget|release|client|customer|test|migration|priority|feedback|target|goal|cost|schedule|team|project|report|design|data|sales|review)\b/i;
+function contentWords(s) { return (s.toLowerCase().match(/\p{L}[\p{L}'’]*\p{L}/gu) || []).map(w => w.replace(/['’]s$/, '')).filter(w => w.length > 2 && !STOP.has(w)); }
+function sentencesOf(m) {
+  const out = [];
+  m.rows.forEach(r => (r.text.match(/[^.!?।]+[.!?।]*/g) || []).map(s => s.trim()).filter(Boolean).forEach(s => out.push({ s, r })));
+  return out;
+}
+function tidy(s) { return cap(s.replace(/^(?:so|and|okay|ok|well|then|yeah|right|um|uh)[,\s]+/i, '').replace(/^(?:so|and|okay|ok|well|then)[,\s]+/i, '')); }
+function buildMom(m) {
+  const names = m.speakers.map(s => s.name);
+  const nameSet = new Set([...names, ...(m.attendees || [])].flatMap(n => n.toLowerCase().split(/\s+/)));
+  const sents = sentencesOf(m);
+  const freq = {};
+  sents.forEach(({ s }) => contentWords(s).forEach(w => { if (!nameSet.has(w)) freq[w] = (freq[w] || 0) + 1; }));
+  const decisions = [], actions = [], points = [], used = new Set();
+  sents.forEach(({ s, r }, i) => {
+    const who = names[r.spk], words = s.split(/\s+/).length;
+    if (words < 4 || /\?$/.test(s) || INTRO_RE.test(s)) return;
+    if (DECISION_RE.test(s)) { decisions.push(tidy(s)); used.add(i); return; }
+    if (ACTION_RE.test(s) && /\b(I|i|we|you|he|she|they|[A-Z][a-z]+)\b/i.test(s) && !/\b(would|could|might|maybe)\b/i.test(s)) {
+      if (words < 5 || (/^(yes|yeah|sure|okay|ok)\b/i.test(s) && words < 7)) return;
+      let owner = who;
+      const named = s.match(/\b([A-Z][a-z]+)\s+(?:will|'ll|needs to|has to|is going to)\b/);
+      const match = named && names.find(n => n.toLowerCase().startsWith(named[1].toLowerCase()));
+      if (match) owner = match;
+      else if (/^\s*(?:and |so |okay,? |then )?we\b/i.test(s)) owner = 'Team';
+      else if (/^\s*(?:and |so |okay,? |then )?you\b/i.test(s)) owner = '';
+      const dm = s.match(DUE_RE) || [];
+      actions.push({ text: tidy(s), owner, due: cap(dm[1] || dm[2] || ''), done: false });
+      used.add(i); return;
+    }
+    if (words >= 7 && TOPIC_RE.test(s)) points.push({ text: `${who}: ${tidy(s)}`, i });
+  });
+  // Summary: the sentences that carry the meeting's most repeated words
+  const scored = sents.map(({ s, r }, i) => {
+    const ws = s.split(/\s+/).length;
+    if (ws < 6 || ws > 45 || used.has(i) || /\?$/.test(s) || INTRO_RE.test(s)) return { i, score: -1 };
+    const cw = [...new Set(contentWords(s))].filter(w => !nameSet.has(w));
+    return { i, s, r, score: cw.reduce((t, w) => t + (freq[w] > 1 ? freq[w] : 0), 0) / Math.sqrt(ws) };
+  });
+  const k = Math.max(2, Math.min(6, Math.round(sents.length / 8)));
+  const pick = scored.filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, k).sort((a, b) => a.i - b.i);
+  const summary = pick.map(x => `${names[x.r.spk]}: ${tidy(x.s)}`);
+  const inSummary = new Set(pick.map(x => x.i));
+  // Topics: repeated word pairs first, then repeated words
+  const bi = {};
+  sents.forEach(({ s }) => { const w = contentWords(s).filter(x => !nameSet.has(x)); for (let j = 0; j + 1 < w.length; j++) { const key = w[j] + ' ' + w[j + 1]; bi[key] = (bi[key] || 0) + 1; } });
+  const topics = [];
+  Object.entries(bi).filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]).slice(0, 4).forEach(([t]) => topics.push(t));
+  Object.entries(freq).filter(([w, c]) => c >= 2 && !topics.some(t => t.split(' ').includes(w))).sort((a, b) => b[1] - a[1]).slice(0, 8 - topics.length).forEach(([w]) => topics.push(w));
+  return {
+    summary, topics: topics.map(cap), decisions, actions,
+    points: points.filter(p => !inSummary.has(p.i)).slice(0, 12).map(p => p.text),
+    notes: '', edited: false,
+  };
+}
+function attendeesOf(m) { return [...new Set([...m.speakers.map(s => s.name), ...(m.attendees || [])])]; }
+
+function editList(m, key, title, placeholder) {
+  const sec = el('section'), head = el('div', null, 'sec-h');
+  head.appendChild(el('h3', title));
+  const add = el('button', '+ Add', 'ghost sm'); add.type = 'button'; head.appendChild(add);
+  const ul = el('ul', null, 'elist');
+  const draw = () => {
+    ul.textContent = '';
+    if (!m.mom[key].length) ul.appendChild(el('p', `None found. Use "+ Add" to write one.`, 'hint'));
+    m.mom[key].forEach((txt, i) => {
+      const li = el('li'), span = el('span', txt);
+      span.contentEditable = 'true'; span.spellcheck = true; span.dataset.ph = placeholder;
+      span.addEventListener('input', () => { m.mom[key][i] = span.textContent.trim(); m.mom.edited = true; save(m); });
+      span.addEventListener('blur', () => { if (!m.mom[key][i]) { m.mom[key].splice(i, 1); save(m); draw(); } });
+      const x = el('button', '✕', 'icon ghost x'); x.type = 'button'; x.title = 'Remove'; x.setAttribute('aria-label', 'Remove');
+      x.onclick = () => { m.mom[key].splice(i, 1); m.mom.edited = true; save(m); draw(); };
+      li.append(span, x); ul.appendChild(li);
     });
-  });
+  };
+  add.onclick = () => { m.mom[key].push(''); draw(); const s = ul.querySelectorAll('li span'); s[s.length - 1].focus(); };
+  draw(); sec.append(head, ul); return sec;
+}
+function renderMinutes() {
+  const m = cur, box = $('p-minutes'); box.textContent = '';
+  if (!m.mom) { if (m.rows.length) m.mom = buildMom(m); else return; }
+  const card = el('div', null, 'card mom');
+  // header
+  const h = el('div', null, 'sec-h');
+  const ht = el('div'); ht.style.display = 'grid'; ht.style.gap = '2px';
+  ht.append(el('h2', 'Minutes of meeting'), el('p', `${m.title} · ${dateStr(m.created)} · ${mins(m.duration)}`, 'hint'));
+  const tools = el('div', null, 'row');
+  if ('Summarizer' in self) {
+    const ai = el('button', 'Rewrite summary with Chrome AI', 'sm'); ai.type = 'button'; ai.hidden = true; ai.onclick = () => aiSummary(m, ai); tools.appendChild(ai);
+    Promise.resolve(Summarizer.availability ? Summarizer.availability() : 'available').then(a => { ai.hidden = a === 'unavailable'; }).catch(() => {});
+  }
+  const regen = el('button', 'Regenerate', 'sm'); regen.type = 'button';
+  regen.onclick = () => { if (m.mom.edited && !confirm('Regenerate the minutes from the transcript? Your edits to the minutes will be replaced.')) return; const notes = m.mom.notes; m.mom = buildMom(m); m.mom.notes = notes; save(m); renderMinutes(); };
+  tools.appendChild(regen);
+  h.append(ht, tools); card.appendChild(h);
+  // attendees
+  const at = el('section'); at.append(el('div', null, 'sec-h'), el('p', attendeesOf(m).join(', ') || '—', 'attend'));
+  at.firstChild.appendChild(el('h3', 'Attendees')); card.appendChild(at);
+  // topics
+  if (m.mom.topics.length) {
+    const tp = el('section'); const th = el('div', null, 'sec-h'); th.appendChild(el('h3', 'Topics')); const chips = el('div', null, 'chips');
+    m.mom.topics.forEach(t => chips.appendChild(el('span', t, 'chip'))); tp.append(th, chips); card.appendChild(tp);
+  }
+  card.appendChild(editList(m, 'summary', 'Summary', 'Write a summary point'));
+  card.appendChild(editList(m, 'decisions', 'Decisions', 'Write a decision'));
+  // action items
+  const as = el('section'), ah = el('div', null, 'sec-h'); ah.appendChild(el('h3', 'Action items'));
+  const addA = el('button', '+ Add', 'ghost sm'); addA.type = 'button'; ah.appendChild(addA);
+  const wrap = el('div', null, 'tablewrap'); as.append(ah, wrap);
+  const dl = el('datalist'); dl.id = 'ownerList'; [...attendeesOf(m), 'Team'].forEach(n => dl.appendChild(new Option(n))); as.appendChild(dl);
+  const drawA = () => {
+    wrap.textContent = '';
+    if (!m.mom.actions.length) { wrap.appendChild(el('p', 'None found. Use "+ Add" to write one.', 'hint')); return; }
+    const tb = el('table', null, 'actions'), hr = el('tr');
+    ['Done', 'Action', 'Owner', 'Due', ''].forEach(t => hr.appendChild(el('th', t))); tb.appendChild(el('thead')).appendChild(hr);
+    const body = tb.appendChild(el('tbody'));
+    m.mom.actions.forEach((a, i) => {
+      const tr = el('tr'); if (a.done) tr.className = 'done';
+      const cb = el('input'); cb.type = 'checkbox'; cb.checked = a.done; cb.setAttribute('aria-label', 'Done');
+      cb.onchange = () => { a.done = cb.checked; tr.classList.toggle('done', a.done); m.mom.edited = true; save(m); };
+      const mk = (k, ph, list, w) => { const inp = el('input'); inp.type = 'text'; inp.value = a[k] || ''; inp.placeholder = ph; inp.setAttribute('aria-label', ph); if (list) inp.setAttribute('list', list); if (w) inp.style.minWidth = w; inp.oninput = () => { a[k] = inp.value; m.mom.edited = true; save(m); }; return inp; };
+      const x = el('button', '✕', 'icon ghost'); x.type = 'button'; x.title = 'Remove'; x.setAttribute('aria-label', 'Remove');
+      x.onclick = () => { m.mom.actions.splice(i, 1); m.mom.edited = true; save(m); drawA(); };
+      const td = c => { const d = el('td'); d.appendChild(c); return d; };
+      const t1 = td(cb); t1.style.width = '44px'; t1.style.textAlign = 'center';
+      tr.append(t1, td(mk('text', 'Action')), td(mk('owner', 'Owner', 'ownerList')), td(mk('due', 'Due')), td(x));
+      body.appendChild(tr);
+    });
+    wrap.appendChild(tb);
+  };
+  addA.onclick = () => { m.mom.actions.push({ text: '', owner: '', due: '', done: false }); drawA(); const r = wrap.querySelectorAll('tbody tr'); r[r.length - 1].querySelector('input[type=text]').focus(); };
+  drawA(); card.appendChild(as);
+  card.appendChild(editList(m, 'points', 'Key discussion points', 'Write a discussion point'));
+  // notes
+  const ns = el('section'), nh = el('div', null, 'sec-h'); nh.appendChild(el('h3', 'Notes'));
+  const ta = el('textarea'); ta.value = m.mom.notes || ''; ta.placeholder = 'Anything else to add to the minutes'; ta.setAttribute('aria-label', 'Notes');
+  ta.oninput = () => { m.mom.notes = ta.value; m.mom.edited = true; save(m); };
+  ns.append(nh, ta); card.appendChild(ns);
+  box.append(card, el('p', 'Drafted automatically from the transcript. Click any line to edit it; changes are saved as you type.', 'hint'));
+}
+async function aiSummary(m, btn) {
+  const old = btn.textContent; btn.disabled = true; btn.textContent = 'Writing…';
+  try {
+    const s = await Summarizer.create({ type: 'key-points', format: 'plain-text', length: 'medium', sharedContext: 'Transcript of a work meeting. Write minutes-style key points.' });
+    const text = m.rows.map(r => `${m.speakers[r.spk].name}: ${r.text}`).join('\n').slice(0, 12000);
+    const out = await s.summarize(text);
+    const pts = out.split('\n').map(x => x.replace(/^\s*[-*•\d.]+\s*/, '').trim()).filter(Boolean);
+    if (pts.length) { m.mom.summary = pts.map(p => correct(p, m.attendees)); m.mom.edited = true; save(m); renderMinutes(); }
+  } catch (e) { toast('Chrome AI could not write the summary: ' + (e.message || e)); btn.disabled = false; btn.textContent = old; }
 }
 
-function talkTime(i) { return rows.filter(r => r.spk === i).reduce((t, r) => t + r.end - r.start, 0); }
+// ================= Meeting page =================
+let playerUrl = null, playerFor = null;
+async function openMeeting(m) {
+  if (cur !== m) { tab = (job && job.id === m.id) || !m.rows.length ? 'tx' : 'minutes'; setupOpen = false; $('fFind').value = ''; $('fRep').value = ''; $('fCount').textContent = ''; }
+  cur = m;
+  renderMeeting();
+  if (playerFor !== m.id) {
+    const b = await getAudio(m.id);
+    if (cur !== m) return;
+    if (playerUrl) URL.revokeObjectURL(playerUrl);
+    playerUrl = b ? URL.createObjectURL(b) : null; playerFor = m.id;
+    $('player').src = playerUrl || '';
+  }
+}
+let setupOpen = false;
+function metaLine(m) {
+  const bits = [dateStr(m.created), mins(m.duration)];
+  if (m.speakers.length) bits.push(`${m.speakers.length} speaker${m.speakers.length === 1 ? '' : 's'}`);
+  bits.push(m.lang === 'en' ? 'English' : `${(LANGS[m.lang] || LANGS.auto).name}, written in English`);
+  if (m.status === 'ready') bits.push(quality(m) === 'high' ? 'High accuracy' : 'Standard accuracy');
+  if (m.source) bits.push(m.source);
+  return bits.join(' · ');
+}
+function renderMeeting() {
+  const m = cur; if (!m) return;
+  if (document.activeElement !== $('mTitle')) $('mTitle').value = m.title;
+  $('mMeta').textContent = metaLine(m);
+  const running = !!(job && job.id === m.id);
+  const interrupted = m.status === 'processing' && !running;
+  $('prog').hidden = !running; renderJob();
+  $('mErr').hidden = !(m.status === 'error' || interrupted);
+  $('mErr').textContent = interrupted ? 'The transcript was interrupted (the page was closed or reloaded). Press "Make transcript" to start again.' : 'Something went wrong: ' + (m.error || '') ;
+  const needSetup = !running && (m.status === 'recorded' || m.status === 'error' || interrupted || setupOpen);
+  $('setup').hidden = !needSetup;
+  if (needSetup) {
+    $('setupTitle').textContent = m.status === 'ready' ? 'Redo the transcript' : 'Make the transcript';
+    $('setupCancel').hidden = m.status !== 'ready';
+    $('mLang').value = m.lang in LANGS ? m.lang : 'en'; $('mNspk').value = String(m.nspk || 0); $('mQual').value = m.quality || 'auto'; setupHint();
+    if (document.activeElement !== $('mPeople')) $('mPeople').value = (m.attendees || []).join('\n');
+  }
+  const hasRows = m.rows.length > 0, ready = m.status === 'ready';
+  ['xDoc', 'xPdf', 'xCopy', 'xTxt', 'xSrt'].forEach(id => $(id).disabled = !ready || !hasRows);
+  $('xRedo').disabled = running;
+  $('mBody').hidden = !hasRows && !(m.live && m.live.length);
+  document.querySelector('[data-tab=minutes]').hidden = !ready;
+  document.querySelector('[data-tab=spk]').hidden = !hasRows;
+  document.querySelector('[data-tab=tx]').hidden = !hasRows;
+  document.querySelector('[data-tab=live]').hidden = !(m.live && m.live.length);
+  const visible = [...document.querySelectorAll('.tabs button')].filter(b => !b.hidden).map(b => b.dataset.tab);
+  if (!visible.includes(tab)) tab = visible[0] || 'tx';
+  showTab(tab);
+}
+function showTab(t) {
+  tab = t;
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+  ['minutes', 'tx', 'spk', 'live'].forEach(k => $('p-' + k).hidden = k !== t);
+  if (t === 'minutes') renderMinutes();
+  if (t === 'tx') renderRows();
+  if (t === 'spk') renderSpeakers();
+  if (t === 'live') renderLiveSaved();
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+$('mTitle').addEventListener('input', () => { if (!cur) return; cur.title = $('mTitle').value.trim() || 'Untitled meeting'; save(cur); });
+$('xRedo').onclick = () => { $('moreMenu').open = false; setupOpen = true; renderMeeting(); $('setup').scrollIntoView({ block: 'center' }); };
+function setupHint() {
+  const q = quality({ lang: $('mLang').value, quality: $('mQual').value });
+  $('setupHint').textContent = `${$('mLang').value === 'en' ? 'Written in English.' : 'Written in English (translated from what was said).'} ${q === 'high' ? 'High accuracy takes about 3x the meeting length on a typical laptop' : 'Standard accuracy takes about as long as the meeting'}. The first time, the speech models (${q === 'high' ? 'about 400' : 'about 190'} MB) are downloaded and then kept in your browser.`;
+}
+$('mLang').addEventListener('change', setupHint); $('mQual').addEventListener('change', setupHint);
+$('setupCancel').onclick = () => { setupOpen = false; renderMeeting(); };
+$('setupGo').onclick = () => {
+  const m = cur; if (!m) return;
+  if (m.status === 'ready' && m.mom && m.mom.edited && !confirm('Redo the transcript? Your edits to the transcript and minutes will be replaced.')) return;
+  m.lang = $('mLang').value; m.nspk = +$('mNspk').value; m.quality = $('mQual').value; m.attendees = lines($('mPeople').value);
+  setupOpen = false; process(m);
+};
+$('xDel').onclick = async () => {
+  $('moreMenu').open = false;
+  const m = cur; if (!m) return;
+  if (job && job.id === m.id) { toast('Wait for the transcript to finish first.'); return; }
+  if (!confirm(`Delete "${m.title}" and its recording from this browser?`)) return;
+  await DB.del(m.id); cache.delete(m.id); audioBlobs.delete(m.id);
+  location.hash = '#/meetings';
+};
+document.addEventListener('click', e => { const mm = $('moreMenu'); if (mm.open && !mm.contains(e.target)) mm.open = false; });
 
+// ---- Speakers ----
 function renderSpeakers() {
-  const box = $('speakers'); box.textContent = '';
-  const total = speakers.reduce((t, _, i) => t + talkTime(i), 0) || 1;
-  speakers.forEach((s, i) => {
-    const d = document.createElement('div'); d.className = 'spk'; d.style.setProperty('--c', `var(${s.color})`);
-    const inp = document.createElement('input'); inp.type = 'text'; inp.value = s.name; inp.id = 'spk' + i; inp.setAttribute('aria-label', `Name for speaker ${i + 1}`);
-    inp.addEventListener('input', () => { s.name = inp.value.trim() || `Speaker ${i + 1}`; renderRows(); renderMom(); });
-    const tt = talkTime(i);
-    const meta = document.createElement('div'); meta.className = 'meta';
-    const info = document.createElement('span'); info.textContent = `${fmt(tt)} · ${Math.round(tt / total * 100)}%${s.auto ? ' · named from intro' : ''}`;
-    const play = document.createElement('button'); play.className = 'small'; play.type = 'button'; play.textContent = '▶'; play.title = 'Hear this speaker';
-    play.onclick = () => { const r = rows.filter(x => x.spk === i).sort((a, b) => (b.end - b.start) - (a.end - a.start))[0]; if (r) playFrom(r.start, Math.min(r.end, r.start + 6)); };
-    meta.append(info, play);
-    const sh = document.createElement('div'); sh.className = 'share'; const bar = document.createElement('i'); bar.style.width = (tt / total * 100) + '%'; sh.appendChild(bar);
-    d.append(inp, meta, sh); box.appendChild(d);
+  const m = cur, box = $('speakers'); box.textContent = '';
+  const total = m.speakers.reduce((t, _, i) => t + talkTime(m, i), 0) || 1;
+  m.speakers.forEach((s, i) => {
+    const d = el('div', null, 'spk'); d.style.setProperty('--c', `var(${s.color})`);
+    const inp = el('input'); inp.type = 'text'; inp.value = s.name; inp.setAttribute('aria-label', `Name for speaker ${i + 1}`);
+    let before = s.name;
+    inp.addEventListener('input', () => { s.name = inp.value.trim() || `Speaker ${i + 1}`; save(m); });
+    inp.addEventListener('change', () => { renameInMinutes(m, before, s.name); before = s.name; });
+    const tt = talkTime(m, i), meta = el('div', null, 'meta');
+    const play = el('button', '▶ Hear', 'sm'); play.type = 'button';
+    play.onclick = () => { const r = m.rows.filter(x => x.spk === i).sort((a, b) => (b.end - b.start) - (a.end - a.start))[0]; if (r) playFrom(r.start, Math.min(r.end, r.start + 8)); };
+    meta.append(el('span', `${fmt(tt)} · ${Math.round(tt / total * 100)}%${s.auto ? ' · named from intro' : ''}`), play);
+    const sh = el('div', null, 'share'), bar = el('i'); bar.style.width = (tt / total * 100) + '%'; sh.appendChild(bar);
+    d.append(inp, meta, sh);
+    if (m.speakers.length > 1) {
+      const sel = el('select'); sel.setAttribute('aria-label', 'Same person as');
+      sel.appendChild(new Option('Same person as…', ''));
+      m.speakers.forEach((o, j) => { if (j !== i) sel.appendChild(new Option(o.name, j)); });
+      sel.onchange = () => { if (sel.value !== '') mergeSpeakers(m, i, +sel.value); };
+      d.appendChild(sel);
+    }
+    box.appendChild(d);
   });
 }
+function renameInMinutes(m, from, to) {
+  if (!m.mom || !from || from === to) return;
+  const re = new RegExp(`(^|${WORD_EDGE})${escRe(from)}(?=$|${WORD_EDGE})`, 'gu');
+  const f = s => String(s || '').replace(re, (_, a) => a + to);
+  ['summary', 'decisions', 'points', 'topics'].forEach(k => m.mom[k] = m.mom[k].map(f));
+  m.mom.actions.forEach(a => { a.owner = f(a.owner); a.text = f(a.text); });
+  save(m);
+}
+function mergeSpeakers(m, from, into) {
+  const gone = m.speakers[from].name, keep = m.speakers[into].name;
+  m.rows.forEach(r => { if (r.spk === from) r.spk = into; if (r.spk > from) r.spk--; });
+  m.speakers.splice(from, 1);
+  renameInMinutes(m, gone, keep);
+  save(m); toast(`Merged ${gone} into ${keep}.`); renderMeeting();
+}
 
-function rowEl(r) {
-  const d = document.createElement('div'); d.className = 'r'; d.dataset.id = r.id;
-  const ts = document.createElement('button'); ts.className = 'ts'; ts.type = 'button'; ts.textContent = fmt(r.start); ts.onclick = () => playFrom(r.start);
-  const sel = document.createElement('select'); sel.setAttribute('aria-label', 'Speaker');
-  speakers.forEach((s, i) => { const o = document.createElement('option'); o.value = i; o.textContent = s.name; sel.appendChild(o); });
-  sel.value = r.spk; sel.style.setProperty('--c', `var(${speakers[r.spk].color})`);
-  sel.onchange = () => { r.spk = +sel.value; sel.style.setProperty('--c', `var(${speakers[r.spk].color})`); renderSpeakers(); renderMom(); };
-  const t = document.createElement('div'); t.className = 't' + (r.done ? '' : ' pending');
-  t.textContent = r.done ? r.text : 'Transcribing…';
-  if (r.done) { t.contentEditable = 'true'; t.spellcheck = true; t.addEventListener('blur', () => { r.text = t.textContent.trim(); }); }
+// ---- Transcript ----
+function rowEl(m, r) {
+  const d = el('div', null, 'r'); d.dataset.id = r.id;
+  const ts = el('button', fmt(r.start), 'ts'); ts.type = 'button'; ts.title = 'Play from here'; ts.onclick = () => playFrom(r.start);
+  const sel = el('select'); sel.setAttribute('aria-label', 'Speaker');
+  m.speakers.forEach((s, i) => sel.appendChild(new Option(s.name, i)));
+  sel.value = r.spk; sel.style.setProperty('--c', `var(${m.speakers[r.spk].color})`);
+  sel.onchange = () => { r.spk = +sel.value; sel.style.setProperty('--c', `var(${m.speakers[r.spk].color})`); save(m); };
+  const pending = r.done === false;
+  const t = el('div', pending ? 'Transcribing…' : r.text, 't' + (pending ? ' pending' : ''));
+  if (!pending) { t.contentEditable = 'true'; t.spellcheck = true; t.addEventListener('input', () => { r.text = t.textContent.trim(); save(m); }); }
+  const q = $('fFind').value.trim().toLowerCase();
+  if (q && !pending && r.text.toLowerCase().includes(q)) d.classList.add('hit');
   d.append(ts, sel, t); return d;
 }
-function renderRows() { const box = $('tx'); const top = box.scrollTop; box.textContent = ''; rows.forEach(r => box.appendChild(rowEl(r))); box.scrollTop = top; }
-function updateRow(r) { const old = $('tx').querySelector(`.r[data-id="${r.id}"]`); if (old) old.replaceWith(rowEl(r)); }
+function renderRows() { const m = cur, box = $('tx'); box.textContent = ''; m.rows.forEach(r => box.appendChild(rowEl(m, r))); countHits(); }
+function updateRow(r) { if (tab !== 'tx') return; const old = $('tx').querySelector(`.r[data-id="${r.id}"]`); if (old) old.replaceWith(rowEl(cur, r)); }
+function countHits() {
+  const q = $('fFind').value.trim().toLowerCase();
+  if (!q || !cur) { $('fCount').textContent = ''; return 0; }
+  let n = 0; cur.rows.forEach(r => { n += r.text.toLowerCase().split(q).length - 1; });
+  $('fCount').textContent = n ? `${n} match${n === 1 ? '' : 'es'}` : 'No matches';
+  return n;
+}
+$('fFind').addEventListener('input', () => {
+  const q = $('fFind').value.trim().toLowerCase();
+  document.querySelectorAll('#tx .r').forEach(d => { const r = cur.rows.find(x => String(x.id) === d.dataset.id); d.classList.toggle('hit', !!q && !!r && r.text.toLowerCase().includes(q)); });
+  countHits();
+  const first = document.querySelector('#tx .r.hit'); if (first) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+});
+$('fGo').onclick = () => {
+  const m = cur, from = $('fFind').value.trim(), to = $('fRep').value.trim();
+  if (!m || !from) { toast('Type the word to find first.'); return; }
+  const re = new RegExp(`(^|${WORD_EDGE})${escRe(from)}(?=$|${WORD_EDGE})`, 'giu');
+  let n = 0; const f = s => String(s || '').replace(re, (_, a) => { n++; return a + to; });
+  m.rows.forEach(r => r.text = f(r.text));
+  const inRows = n;
+  if (m.mom) { ['summary', 'decisions', 'points'].forEach(k => m.mom[k] = m.mom[k].map(f)); m.mom.actions.forEach(a => { a.text = f(a.text); a.owner = f(a.owner); }); m.mom.notes = f(m.mom.notes); }
+  (m.live || []).forEach(l => { l.text = f(l.text); if (l.en) l.en = f(l.en); });
+  if ($('fRemember').checked && to) {
+    const list = repls().filter(x => x.from.toLowerCase() !== from.toLowerCase()); list.push({ from, to }); ls.set('mr-repl', list);
+    if (/^[A-Z]/.test(to) && !/\s/.test(to) && !vocab().some(v => v.toLowerCase() === to.toLowerCase())) ls.set('mr-vocab', [...vocab(), to].join('\n'));
+  }
+  save(m); $('fFind').value = ''; renderRows();
+  $('fCount').textContent = `Replaced ${inRows} in the transcript${$('fRemember').checked && to ? ' · remembered for future meetings' : ''}`;
+};
 
+function renderLiveSaved() {
+  const box = $('liveSaved'); box.textContent = '';
+  (cur.live || []).forEach(l => box.appendChild(lineEl(l, true)));
+}
+
+// ---- Audio player ----
 let stopAt = null;
 function playFrom(t, until) { const p = $('player'); p.currentTime = t; stopAt = until || null; p.play().catch(() => {}); }
 $('player').addEventListener('timeupdate', () => {
   const p = $('player'), t = p.currentTime;
   if (stopAt && t >= stopAt) { p.pause(); stopAt = null; }
   document.querySelectorAll('#tx .r.playing').forEach(e => e.classList.remove('playing'));
-  if (p.paused) return;
-  const r = rows.find(x => t >= x.start && t < x.end); if (r) { const el = $('tx').querySelector(`.r[data-id="${r.id}"]`); if (el) el.classList.add('playing'); }
+  if (p.paused || !cur || tab !== 'tx') return;
+  const r = cur.rows.find(x => t >= x.start && t < x.end);
+  if (r) { const e = $('tx').querySelector(`.r[data-id="${r.id}"]`); if (e) e.classList.add('playing'); }
 });
 
-// ---------- Minutes draft ----------
-const DAY = '(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)';
-const DUE_RE = new RegExp(`\\b(?:by|before|on|until|till|due)\\s+((?:next |this |the )?(?:${DAY}|week|month|tomorrow|today|tonight|eod|end of (?:the )?(?:day|week|month)|\\d{1,2}(?:st|nd|rd|th)?(?: of)? [a-z]+|[a-z]+ \\d{1,2}(?:st|nd|rd|th)?))|\\b(tomorrow|next week|next month|this week|end of (?:the )?(?:day|week|month)|eod)\\b`, 'i');
-const DECISION_RE = /\b(decided|decision|agreed|agree on|we(?:'ll| will) go with|let'?s go with|finali[sz]ed?|approved|confirmed|settled on)\b/i;
-const ACTION_RE = /\b(will|'ll|need(?:s)? to|have to|has to|must|going to|action item|follow up|take care of)\b/i;
-const TOPIC_RE = /\b(status|update|issue|problem|risk|plan|progress|done|finished|completed|blocked|delay|launch|deadline|budget|release|client|customer|test|migration|priority|feedback|target|goal|cost|schedule|meeting|team|project|report)\b/i;
-function sentences() {
-  const out = [];
-  rows.forEach(r => (r.text.match(/[^.!?]+[.!?]*/g) || []).map(s => s.trim()).filter(Boolean).forEach(s => out.push({ s, r })));
-  return out;
+// ================= Exports =================
+function baseName(m) { return slug(m.title) + '_' + stamp(new Date(m.created)); }
+function plainTranscript(m) { return m.rows.map(r => `[${fmt(r.start)}] ${m.speakers[r.spk].name}: ${r.text}`).join('\n'); }
+function minutesText(m) {
+  const mo = m.mom, b = a => a.length ? a.map(x => '- ' + x) : ['- None'];
+  return [`MINUTES OF MEETING: ${m.title}`, `${dateStr(m.created)} · ${mins(m.duration)}`, '',
+    'ATTENDEES', attendeesOf(m).join(', '), '',
+    ...(mo.topics.length ? ['TOPICS', mo.topics.join(', '), ''] : []),
+    'SUMMARY', ...b(mo.summary), '',
+    'DECISIONS', ...b(mo.decisions), '',
+    'ACTION ITEMS', ...(mo.actions.length ? mo.actions.map((a, i) => `${i + 1}. ${a.done ? '[done] ' : ''}${a.text}${a.owner ? ' | Owner: ' + a.owner : ''}${a.due ? ' | Due: ' + a.due : ''}`) : ['- None']), '',
+    'KEY DISCUSSION POINTS', ...b(mo.points),
+    ...(mo.notes ? ['', 'NOTES', mo.notes] : [])].join('\n');
 }
-function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
-function buildMom() {
-  const names = speakers.map(s => s.name);
-  const decisions = [], actions = [], points = [];
-  for (const { s, r } of sentences()) {
-    const who = speakers[r.spk].name, words = s.split(/\s+/).length;
-    if (words < 4 || /\?$/.test(s)) continue;
-    if (/\b(this is|i am|i'm|my name is|myself)\s+[A-Z]/i.test(s)) continue;
-    if (DECISION_RE.test(s)) { decisions.push({ text: cap(s), who, t: r.start }); continue; }
-    if (ACTION_RE.test(s) && /\b(i|we|you|he|she|they|[A-Z][a-z]+)\b/.test(s) && !/\b(would|could|might|maybe)\b/i.test(s)) {
-      let owner = who;
-      const named = s.match(/\b([A-Z][a-z]+)\s+(?:will|'ll|needs to|has to|is going to)\b/);
-      if (named && names.some(n => n.toLowerCase().startsWith(named[1].toLowerCase()))) owner = names.find(n => n.toLowerCase().startsWith(named[1].toLowerCase()));
-      else if (/^\s*(?:and |so |okay,? |then )?we\b/i.test(s)) owner = 'Team';
-      else if (/^\s*(?:and |so |okay,? |then )?you\b/i.test(s)) owner = 'To confirm';
-      const due = (s.match(DUE_RE) || [])[1] || (s.match(DUE_RE) || [])[2] || '';
-      if (words < 5 || /^(yes|yeah|sure|okay|ok)\b/i.test(s) && words < 7) continue;
-      actions.push({ text: cap(s), owner, due: due ? cap(due) : '', t: r.start });
-      continue;
-    }
-    if (words >= 7 && TOPIC_RE.test(s)) points.push({ text: cap(s), who, t: r.start });
-  }
-  return { decisions, actions, points: points.slice(0, 15) };
+function docHtml(m) {
+  const mo = m.mom;
+  const ul = a => a.length ? '<ul>' + a.map(x => `<li>${esc(x)}</li>`).join('') + '</ul>' : '<p class="none">None.</p>';
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${esc(m.title)}</title>
+<style>@page{margin:18mm}body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;line-height:1.45}h1{font-size:20pt;color:#1f3d7a;margin:0 0 2pt}h2{font-size:12.5pt;color:#1f3d7a;border-bottom:1px solid #c9d3e6;padding-bottom:2pt;margin:16pt 0 6pt}table{border-collapse:collapse;width:100%}th,td{border:1px solid #c9d3e6;padding:4pt 6pt;text-align:left;vertical-align:top}th{background:#eef2f9}.meta{color:#555;margin:0}.none{color:#777;font-style:italic}.ts{color:#777;font-family:Consolas,monospace;font-size:9.5pt}.who{font-weight:bold}.tx p{margin:0 0 4pt}ul{margin:0;padding-left:18pt}</style></head><body>
+<h1>Minutes of Meeting</h1>
+<p class="meta"><b>${esc(m.title)}</b><br>${esc(dateStr(m.created))} · Duration ${esc(mins(m.duration))}</p>
+<h2>Attendees</h2><p>${esc(attendeesOf(m).join(', '))}</p>
+${mo.topics.length ? `<h2>Topics</h2><p>${esc(mo.topics.join(' · '))}</p>` : ''}
+<h2>Summary</h2>${ul(mo.summary)}
+<h2>Decisions</h2>${ul(mo.decisions)}
+<h2>Action items</h2>${mo.actions.length ? `<table><tr><th>#</th><th>Action</th><th>Owner</th><th>Due</th><th>Status</th></tr>${mo.actions.map((a, i) => `<tr><td>${i + 1}</td><td>${esc(a.text)}</td><td>${esc(a.owner || '—')}</td><td>${esc(a.due || '—')}</td><td>${a.done ? 'Done' : 'Open'}</td></tr>`).join('')}</table>` : '<p class="none">None.</p>'}
+<h2>Key discussion points</h2>${ul(mo.points)}
+${mo.notes ? `<h2>Notes</h2><p>${esc(mo.notes).replace(/\n/g, '<br>')}</p>` : ''}
+<h2>Speaking time</h2><table><tr><th>Speaker</th><th>Time</th></tr>${m.speakers.map((s, i) => `<tr><td>${esc(s.name)}</td><td>${fmt(talkTime(m, i))}</td></tr>`).join('')}</table>
+<h2>Full transcript</h2><div class="tx">${m.rows.map(r => `<p><span class="ts">[${fmt(r.start)}]</span> <span class="who">${esc(m.speakers[r.spk].name)}:</span> ${esc(r.text)}</p>`).join('')}</div>
+<p class="meta" style="margin-top:14pt"><i>Drafted from the meeting recording. Please review before sharing.</i></p></body></html>`;
 }
-function el(tag, text, cls) { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; }
-function list(items, fmtItem) {
-  if (!items.length) return el('p', 'None found in the conversation.', 'empty');
-  const ul = el('ul'); items.forEach(i => ul.appendChild(el('li', fmtItem(i)))); return ul;
-}
-function meetingTitle() { return $('title').value.trim() || (source ? source.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ') : 'Meeting'); }
-function renderMom() {
-  if (!rows.length) return;
-  const m = buildMom(), box = $('mom'); box.textContent = '';
-  const head = el('div'); head.style.display = 'grid'; head.style.gap = '2px';
-  head.append(el('h3', meetingTitle()), el('p', `${(meetingDate || new Date()).toLocaleString()} · ${fmt(meetingLen)} · ${speakers.length} speakers`, 'small'));
-  box.appendChild(head);
-  box.append(el('h4', 'Attendees'), el('p', [...new Set([...speakers.map(s => s.name), ...people()])].join(', ')));
-  box.append(el('h4', 'Key discussion points'), list(m.points, p => `${p.who}: ${p.text}`));
-  box.append(el('h4', 'Decisions'), list(m.decisions, d => `${d.text} (${d.who})`));
-  box.appendChild(el('h4', 'Action items'));
-  if (!m.actions.length) box.appendChild(el('p', 'None found in the conversation.', 'empty'));
-  else {
-    const wrap = el('div', null, 'tablewrap'), tb = el('table');
-    const hr = el('tr'); ['Action', 'Owner', 'Due'].forEach(h => hr.appendChild(el('th', h))); tb.appendChild(hr);
-    m.actions.forEach(a => { const tr = el('tr'); tr.append(el('td', a.text), el('td', a.owner), el('td', a.due || '—')); tb.appendChild(tr); });
-    wrap.appendChild(tb); box.appendChild(wrap);
-  }
-}
-$('refreshMom').onclick = renderMom;
+$('xDoc').onclick = () => download(new Blob(['﻿' + docHtml(cur)], { type: 'application/msword' }), baseName(cur) + '_minutes.doc');
+$('xPdf').onclick = () => {
+  const f = document.createElement('iframe'); f.style.position = 'fixed'; f.style.width = '0'; f.style.height = '0'; f.style.border = '0'; f.setAttribute('aria-hidden', 'true');
+  f.onload = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (_) {} setTimeout(() => f.remove(), 60000); };
+  f.srcdoc = docHtml(cur); document.body.appendChild(f);
+};
+$('xTxt').onclick = () => { $('moreMenu').open = false; download(new Blob([minutesText(cur) + '\n\nTRANSCRIPT\n' + plainTranscript(cur)], { type: 'text/plain' }), baseName(cur) + '_minutes.txt'); };
+$('xSrt').onclick = () => {
+  $('moreMenu').open = false;
+  const t = s => { const ms = Math.round(s * 1000); const h = Math.floor(ms / 3600000), mi = Math.floor(ms / 60000) % 60, x = Math.floor(ms / 1000) % 60, r = ms % 1000; return `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}:${String(x).padStart(2, '0')},${String(r).padStart(3, '0')}`; };
+  download(new Blob([cur.rows.map((r, i) => `${i + 1}\n${t(r.start)} --> ${t(r.end)}\n${cur.speakers[r.spk].name}: ${r.text}\n`).join('\n')], { type: 'text/plain' }), baseName(cur) + '.srt');
+};
+$('xMp3').onclick = async () => { $('moreMenu').open = false; const b = await getAudio(cur.id); if (b) download(b, cur.audioName || baseName(cur) + '.mp3'); else toast('The audio for this meeting is missing.'); };
+$('xCopy').onclick = async () => {
+  $('moreMenu').open = false;
+  try { await navigator.clipboard.writeText(minutesText(cur)); toast('Minutes copied. Paste them into an email or chat.'); }
+  catch (_) { toast('Copy was blocked by the browser. Use Download text instead.'); }
+};
 
-// ---------- Exports ----------
-function baseName() { return slug(meetingTitle()) + '_' + stamp(meetingDate || new Date()); }
-function plainTranscript() { return rows.map(r => `[${fmt(r.start)}] ${speakers[r.spk].name}: ${r.text}`).join('\n'); }
-function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-$('dlTxt').onclick = () => {
-  const m = buildMom();
-  const txt = [meetingTitle(), `${(meetingDate || new Date()).toLocaleString()} · ${fmt(meetingLen)}`, '', 'ATTENDEES', [...new Set([...speakers.map(s => s.name), ...people()])].join(', '), '',
-    'KEY DISCUSSION POINTS', ...(m.points.length ? m.points.map(p => `- ${p.who}: ${p.text}`) : ['- None found']), '',
-    'DECISIONS', ...(m.decisions.length ? m.decisions.map(d => `- ${d.text} (${d.who})`) : ['- None found']), '',
-    'ACTION ITEMS', ...(m.actions.length ? m.actions.map(a => `- ${a.text} | Owner: ${a.owner}${a.due ? ' | Due: ' + a.due : ''}`) : ['- None found']), '',
-    'TRANSCRIPT', plainTranscript()].join('\n');
-  download(new Blob([txt], { type: 'text/plain' }), baseName() + '_transcript.txt');
+// ================= My meetings =================
+async function renderList() {
+  const box = $('mlist'); box.textContent = '';
+  let all = [];
+  try { all = await DB.all(); } catch (_) {}
+  all.forEach(m => { if (!cache.has(m.id)) cache.set(m.id, m); });
+  all = all.map(m => cache.get(m.id)).sort((a, b) => b.created - a.created);
+  if (!all.length) {
+    const e = el('div', null, 'card emptybox');
+    e.append(el('h2', 'No meetings yet'), el('p', 'Record your first meeting, or import a recording you already have.'));
+    const a = el('a', 'New meeting', 'btn primary'); a.href = '#/record'; e.appendChild(a);
+    box.appendChild(e);
+  }
+  all.forEach(m => {
+    const it = el('div', null, 'item'), left = el('div');
+    left.style.display = 'grid'; left.style.gap = '2px'; left.style.minWidth = '0';
+    const a = el('a', m.title); a.href = '#/m/' + m.id;
+    const running = job && job.id === m.id;
+    const st = running ? ['Transcribing', 'busy'] : m.status === 'ready' ? ['Minutes ready', 'ok'] : m.status === 'error' ? ['Needs attention', 'err'] : ['Not transcribed', ''];
+    const sub = el('div', null, 'sub');
+    sub.append(el('span', st[0], 'badge ' + st[1]), document.createTextNode('  ' + [dateStr(m.created), mins(m.duration), m.speakers.length ? m.speakers.map(s => s.name).join(', ') : ''].filter(Boolean).join(' · ')));
+    left.append(a, sub);
+    const del = el('button', 'Delete', 'ghost sm danger'); del.type = 'button';
+    del.onclick = async () => { if (running) { toast('Wait for the transcript to finish first.'); return; } if (!confirm(`Delete "${m.title}" and its recording?`)) return; await DB.del(m.id); cache.delete(m.id); audioBlobs.delete(m.id); renderList(); };
+    it.append(left, del); box.appendChild(it);
+  });
+  let note = '';
+  if (await DB.inMemory()) note = 'This browser is not letting the page store meetings (private window?). Download your files before closing the tab.';
+  else if (navigator.storage && navigator.storage.estimate) { try { const e = await navigator.storage.estimate(); note = `Using ${Math.round((e.usage || 0) / 1e6)} MB of browser storage (includes the speech models).`; } catch (_) {} }
+  $('storeNote').textContent = note;
+}
+
+// ================= Word list =================
+function renderWords() {
+  if (document.activeElement !== $('vocab')) $('vocab').value = ls.get('mr-vocab', '');
+  const tb = $('rList'); tb.textContent = '';
+  const list = repls();
+  if (!list.length) { const tr = el('tr'), td = el('td', 'Nothing yet.', 'hint'); td.colSpan = 3; tr.appendChild(td); tb.appendChild(tr); }
+  list.forEach((x, i) => {
+    const tr = el('tr'), b = el('button', 'Remove', 'ghost sm'); b.type = 'button';
+    b.onclick = () => { const l = repls(); l.splice(i, 1); ls.set('mr-repl', l); renderWords(); };
+    const td = el('td'); td.appendChild(b);
+    tr.append(el('td', x.from), el('td', x.to), td); tb.appendChild(tr);
+  });
+  tryIt();
+}
+function tryIt() { const v = $('tryIn').value; $('tryOut').textContent = v ? correct(v) : 'The corrected sentence appears here.'; }
+$('vocab').addEventListener('input', () => { ls.set('mr-vocab', $('vocab').value); tryIt(); });
+$('tryIn').addEventListener('input', tryIt);
+$('rAdd').onclick = () => {
+  const from = $('rFrom').value.trim(), to = $('rTo').value.trim();
+  if (!from || !to) { toast('Fill in both boxes.'); return; }
+  const l = repls().filter(x => x.from.toLowerCase() !== from.toLowerCase()); l.push({ from, to }); ls.set('mr-repl', l);
+  $('rFrom').value = $('rTo').value = ''; renderWords();
 };
-$('dlSrt').onclick = () => {
-  const t = s => { const ms = Math.round(s * 1000); const h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, x = Math.floor(ms / 1000) % 60, r = ms % 1000; return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')},${String(r).padStart(3, '0')}`; };
-  download(new Blob([rows.map((r, i) => `${i + 1}\n${t(r.start)} --> ${t(r.end)}\n${speakers[r.spk].name}: ${r.text}\n`).join('\n')], { type: 'text/plain' }), baseName() + '.srt');
-};
-$('dlDoc').onclick = () => {
-  const m = buildMom();
-  const li = a => a.length ? '<ul>' + a.join('') + '</ul>' : '<p><i>None found in the conversation.</i></p>';
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${esc(meetingTitle())}</title>
-<style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a}h1{font-size:20pt;color:#1f3d7a;margin:0}h2{font-size:13pt;color:#1f3d7a;border-bottom:1px solid #c9d3e6;padding-bottom:2pt;margin-top:16pt}table{border-collapse:collapse;width:100%}th,td{border:1px solid #c9d3e6;padding:4pt 6pt;text-align:left;vertical-align:top}th{background:#eef2f9}.meta{color:#555}.ts{color:#777;font-family:Consolas,monospace}.who{font-weight:bold}</style></head><body>
-<h1>Minutes of Meeting</h1><p class="meta"><b>${esc(meetingTitle())}</b><br>${esc((meetingDate || new Date()).toLocaleString())} · Duration ${fmt(meetingLen)}</p>
-<h2>Attendees</h2><p>${esc([...new Set([...speakers.map(s => s.name), ...people()])].join(', '))}</p>
-<h2>Key discussion points</h2>${li(m.points.map(p => `<li><b>${esc(p.who)}:</b> ${esc(p.text)}</li>`))}
-<h2>Decisions</h2>${li(m.decisions.map(d => `<li>${esc(d.text)} <i>(${esc(d.who)})</i></li>`))}
-<h2>Action items</h2>${m.actions.length ? `<table><tr><th>#</th><th>Action</th><th>Owner</th><th>Due</th></tr>${m.actions.map((a, i) => `<tr><td>${i + 1}</td><td>${esc(a.text)}</td><td>${esc(a.owner)}</td><td>${esc(a.due || '—')}</td></tr>`).join('')}</table>` : '<p><i>None found in the conversation.</i></p>'}
-<h2>Speaking time</h2><table><tr><th>Speaker</th><th>Time</th></tr>${speakers.map((s, i) => `<tr><td>${esc(s.name)}</td><td>${fmt(talkTime(i))}</td></tr>`).join('')}</table>
-<h2>Full transcript</h2>${rows.map(r => `<p><span class="ts">[${fmt(r.start)}]</span> <span class="who">${esc(speakers[r.spk].name)}:</span> ${esc(r.text)}</p>`).join('')}
-<p class="meta"><i>Minutes drafted automatically from the recording. Please review before sharing.</i></p></body></html>`;
-  download(new Blob(['﻿' + html], { type: 'application/msword' }), baseName() + '_minutes.doc');
-};
-$('copyTx').onclick = async () => {
-  try { await navigator.clipboard.writeText(plainTranscript()); $('copyTx').textContent = 'Copied'; }
-  catch (_) { $('copyTx').textContent = 'Copy failed: select the text instead'; }
-  setTimeout(() => $('copyTx').textContent = 'Copy transcript', 2000);
-};
+
+// ================= Status pill and start-up =================
+function updatePill() {
+  const p = $('pill');
+  if (state !== 'idle') { p.hidden = false; p.className = 'pill rec'; p.innerHTML = `<span class="dot ${state === 'recording' ? 'on' : ''}"></span>${state === 'recording' ? 'Recording' : 'Paused'} ${fmt(nowSec())}`; p.onclick = () => location.hash = '#/record'; }
+  else if (job) { p.hidden = false; p.className = 'pill'; p.textContent = `Transcribing ${Math.round(job.frac * 100)}%`; const id = job.id; p.onclick = () => location.hash = '#/m/' + id; }
+  else p.hidden = true;
+}
+setInterval(() => { if (state !== 'idle') updatePill(); }, 1000);
+window.addEventListener('beforeunload', e => { if (state !== 'idle' || job) { e.preventDefault(); e.returnValue = ''; } });
+
+loadPrefs(); syncSetup(); renderTags(); setRecUI();
+if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) show('This browser can\'t record meetings. Open this page in Google Chrome or Microsoft Edge on a computer. You can still import recordings.', 'err');
+if (!ls.get('mr-vocab', null)) ls.set('mr-vocab', 'NoonRay');
+route();
 </script>
 </body>
 </html>

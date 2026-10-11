@@ -1,28 +1,26 @@
 # Meeting Recorder
 
-Record a meeting and get a transcript with every speaker, plus a draft of the minutes, all inside the browser. The recording is never uploaded.
+Record any meeting (Zoom, Teams, Meet or in a room) and get an MP3, live captions, a transcript with every speaker numbered, and editable minutes of meeting. Everything runs inside the browser; recordings are never uploaded.
 
 **Open the GitHub Pages link in Chrome or Edge on a computer.**
 
-## What it does
-1. **Records** your mic plus the Zoom, Teams or Meet call audio (or just the room) into one MP3. Optional screen video.
-2. **Live captions** while you record (Chrome/Edge speech service, needs internet; can be turned off).
-3. **After you stop**, in the page itself:
-   - finds the different voices and labels them Speaker 1, Speaker 2... A voice keeps the same number every time it speaks again;
-   - renames a speaker automatically when they introduce themselves ("this is Priya");
-   - writes the full transcript with Whisper;
-   - drafts the minutes: attendees, key points, decisions, action items with owner and due date.
-4. **Exports** a Word document (minutes + transcript), a text file, and subtitles (.srt).
+## Features
+- **New meeting**: records your mic plus the call audio (or just the room) into one MP3, with an optional screen video.
+- **Live captions** in English, Hindi/Hinglish, Telugu, Tamil, Kannada, Malayalam, Marathi, Bengali or Gujarati. Other languages are translated to English as people speak (Chrome's built-in translator, or Google Translate as a fallback).
+- **Transcript** made in the page: speakers numbered Speaker 1, 2... (the same voice keeps its number), renamed automatically when someone says "I'm Priya". Non-English meetings are written in English.
+- **Accuracy**: Standard (Whisper base, fast) or High (Whisper small, about 3x slower, much better for Hindi and other languages). "Best for the language" picks for you.
+- **Minutes**: summary, topics, decisions, action items (owner, due date, done), key points and notes, all editable.
+- **Word list**: names and special words (e.g. NoonRay) are corrected everywhere, including sound-alikes such as "no entry". Find & Replace in a transcript can be remembered for future meetings.
+- **My meetings**: every meeting is saved in the browser to reopen later.
+- **Exports**: Word, Print/PDF, text, subtitles (.srt), MP3, copy minutes.
 
-You can also open an existing recording (MP3, M4A, WAV, MP4) with "Open a recording…".
+The first transcript downloads the speech models from this site (about 190 MB for Standard, 400 MB for High) and keeps them in the browser.
 
-The first transcript downloads the speech models (about 190 MB) from this site and keeps them in the browser, so later runs start straight away. A 1-hour meeting takes roughly 30–60 minutes to transcribe, depending on the computer.
-
-## Files (keep them all together in the repo's top folder)
+## Files (keep them all in the repo's top folder)
 - `index.html`: the app (MP3 encoder built in)
 - `engine-worker.js`, `sherpa-onnx.js`, `sherpa-onnx.wasm`: the speech engine
-- `speaker-segmentation.onnx`, `speaker-embedding.onnx.part0-1`: speaker detection models
-- `whisper-base-encoder.onnx.part0-1`, `whisper-base-decoder.onnx.part0-6`, `whisper-base-tokens.txt`: transcription model
+- `speaker-segmentation.onnx`, `speaker-embedding.onnx.part*`: speaker detection
+- `whisper-base-*`: Standard transcription model; `whisper-small-*`: High accuracy model
 - Licence files for the bundled components
 
 Large models are split into parts under 25 MB so they can be uploaded through GitHub's website.
